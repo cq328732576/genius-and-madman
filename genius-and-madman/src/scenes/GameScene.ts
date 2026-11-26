@@ -6,6 +6,7 @@
 import Phaser from 'phaser';
 import { AnchorSystem, Vec2, Surface, AnchorState, Anchor } from '../engine/anchorSystem';
 import { tuning } from '../config/tuning';
+import { TuningPanel } from '../ui/TuningPanel';
 
 export class GameScene extends Phaser.Scene {
   private anchorSystem!: AnchorSystem;
@@ -31,15 +32,41 @@ export class GameScene extends Phaser.Scene {
 
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
-  private aimRay: Phaser.GameObjects.Graphics | null = null;
-  private aimReticle: Phaser.GameObjects.Arc | null = null;
-  private snapBadge: Phaser.GameObjects.Text | null = null;
+  private aimRayTiles: Phaser.GameObjects.Image[] = [];
+  private aimReticle: Phaser.GameObjects.Image | null = null;
+  private snapBadge: Phaser.GameObjects.Image | null = null;
 
   // 调试面板
   private debugPanel: Phaser.GameObjects.Text | null = null;
+  private tuningPanel: TuningPanel | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
+  }
+
+  preload() {
+    // 加载锚点光圈
+    this.load.image('anchor_halo_ready_g', 'assets/anchor_halo_ready_g.png');
+    this.load.image('anchor_halo_snap_g', 'assets/anchor_halo_snap_g.png');
+    this.load.image('anchor_halo_locked_g', 'assets/anchor_halo_locked_g.png');
+
+    // 加载锚点脉冲
+    this.load.image('anchor_pulse_g', 'assets/anchor_pulse_g.png');
+
+    // 加载瞄准射线和准星
+    this.load.image('aim_ray_valid_g', 'assets/aim_ray_valid_g.png');
+    this.load.image('aim_ray_forbidden_g', 'assets/aim_ray_forbidden_g.png');
+    this.load.image('aim_reticle_valid_g', 'assets/aim_reticle_valid_g.png');
+    this.load.image('aim_reticle_forbidden_g', 'assets/aim_reticle_forbidden_g.png');
+
+    // 加载吸附半径环
+    this.load.image('snap_ring_thin_m', 'assets/snap_ring_thin_m.png');
+    this.load.image('snap_ring_inrange_m', 'assets/snap_ring_inrange_m.png');
+
+    // 加载徽标
+    this.load.image('snap_badge_snap_zh_m', 'assets/snap_badge_snap_zh_m.png');
+    this.load.image('snap_badge_miss_zh_m', 'assets/snap_badge_miss_zh_m.png');
+    this.load.image('snap_badge_inuse_zh_g', 'assets/snap_badge_inuse_zh_g.png');
   }
 
   create() {
@@ -54,12 +81,18 @@ export class GameScene extends Phaser.Scene {
     // 设置输入
     this.setupInput();
 
-    // 创建图形对象
-    this.aimRay = this.add.graphics();
+    // 准备瞄准射线图块池
+    this.aimRayTiles = [];
 
     // 调试面板
     if (tuning.debug.enabled) {
       this.createDebugPanel();
+      this.tuningPanel = new TuningPanel(this);
+      
+      // T 键切换调参面板
+      this.input.keyboard!.on('keydown-T', () => {
+        this.tuningPanel?.toggle();
+      });
     }
 
     // 设置相机
@@ -255,39 +288,54 @@ export class GameScene extends Phaser.Scene {
       this.surfaces
     );
 
-    // 渲染瞄准射线
-    this.aimRay!.clear();
-    const color = validation.valid ? 0x2fd5ff : 0xff4d6d;
-    const alpha = validation.valid ? 0.8 : 0.5;
+    // 渲染瞄准射线（使用可平铺的图块）
+    const rayKey = validation.valid ? 'aim_ray_valid_g' : 'aim_ray_forbidden_g';
+    const dx = worldPoint.x - this.genius.x;
+    const dy = worldPoint.y - this.genius.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
 
-    this.aimRay!.lineStyle(2, color, alpha);
-    this.aimRay!.beginPath();
-    this.aimRay!.moveTo(this.genius.x, this.genius.y);
-    this.aimRay!.lineTo(worldPoint.x, worldPoint.y);
-    this.aimRay!.strokePath();
+    // 清除旧的射线图块
+    this.aimRayTiles.forEach((tile) => tile.destroy());
+    this.aimRayTiles = [];
+
+    // 创建新的射线图块（每128px一块，缩放0.75）
+    const tileWidth = 128 * 0.75;
+    const numTiles = Math.ceil(distance / tileWidth);
+    
+    for (let i = 0; i < numTiles; i++) {
+      const tile = this.add.image(0, 0, rayKey);
+      tile.setOrigin(0, 0.5);
+      tile.setScale(0.75);
+      tile.setRotation(angle);
+      const x = this.genius.x + Math.cos(angle) * i * tileWidth;
+      const y = this.genius.y + Math.sin(angle) * i * tileWidth;
+      tile.setPosition(x, y);
+      tile.setAlpha(validation.valid ? 0.8 : 0.5);
+      this.aimRayTiles.push(tile);
+    }
 
     // 渲染准星
+    const reticleKey = validation.valid ? 'aim_reticle_valid_g' : 'aim_reticle_forbidden_g';
     if (!this.aimReticle) {
-      this.aimReticle = this.add.circle(0, 0, 16, undefined, 0);
-      this.aimReticle.setStrokeStyle(2, color, alpha);
+      this.aimReticle = this.add.image(0, 0, reticleKey);
+      this.aimReticle.setScale(0.75);
     } else {
-      this.aimReticle.setStrokeStyle(2, color, alpha);
+      this.aimReticle.setTexture(reticleKey);
     }
     this.aimReticle.setPosition(worldPoint.x, worldPoint.y);
     this.aimReticle.setVisible(true);
+    this.aimReticle.setAlpha(validation.valid ? 1.0 : 0.6);
 
     // 显示失败原因
     if (!validation.valid && validation.reason === 'locked_anchor') {
       if (!this.snapBadge) {
-        this.snapBadge = this.add.text(0, 0, '锚点正在被使用', {
-          fontSize: '14px',
-          color: '#fff',
-          backgroundColor: '#f004',
-          padding: { x: 8, y: 4 },
-        });
+        this.snapBadge = this.add.image(0, 0, 'snap_badge_inuse_zh_g');
+        this.snapBadge.setScale(0.9);
+      } else {
+        this.snapBadge.setTexture('snap_badge_inuse_zh_g');
       }
-      this.snapBadge.setPosition(worldPoint.x, worldPoint.y - 40);
-      this.snapBadge.setOrigin(0.5);
+      this.snapBadge.setPosition(worldPoint.x, worldPoint.y - 90);
       this.snapBadge.setVisible(true);
     } else if (this.snapBadge) {
       this.snapBadge.setVisible(false);
@@ -295,9 +343,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private clearAiming() {
-    if (this.aimRay) {
-      this.aimRay.clear();
-    }
+    // 清除射线图块
+    this.aimRayTiles.forEach((tile) => tile.destroy());
+    this.aimRayTiles = [];
+    
     if (this.aimReticle) {
       this.aimReticle.setVisible(false);
     }
@@ -331,52 +380,54 @@ export class GameScene extends Phaser.Scene {
 
     const container = this.add.container(pos.x, pos.y);
 
-    // 光圈（六边形）
-    const halo = this.add.graphics();
-    this.updateAnchorHalo(halo, anchor.state);
+    // 光圈（使用美术资源）
+    const haloKey = this.getAnchorHaloKey(anchor.state);
+    const halo = this.add.image(0, 0, haloKey);
+    halo.setScale(0.5); // 外径约 2.2 单位 ≈ 108px
     container.add(halo);
 
-    // 吸附半径环
-    const snapRing = this.add.circle(0, 0, tuning.madman.snapRadius * tuning.world.pixelsPerUnit);
-    snapRing.setStrokeStyle(2, 0xff8a1f, 0.3);
+    // 吸附半径环（疯子视角用 _m 变体）
+    const snapRadius = tuning.madman.snapRadius * tuning.world.pixelsPerUnit;
+    const snapRing = this.add.image(0, 0, 'snap_ring_thin_m');
+    // 环半径 118px ↔ 判定半径 2.0 单位，缩放 = (2.0×32)/118 ≈ 0.54
+    const ringScale = snapRadius / 118;
+    snapRing.setScale(ringScale);
+    snapRing.setAlpha(0.4);
     snapRing.setVisible(false);
     container.add(snapRing);
 
+    // 可吸附徽标
+    const snapBadge = this.add.image(0, -90, 'snap_badge_snap_zh_m');
+    snapBadge.setScale(0.9);
+    snapBadge.setVisible(false);
+    container.add(snapBadge);
+
     container.setData('halo', halo);
     container.setData('snapRing', snapRing);
+    container.setData('snapBadge', snapBadge);
 
     this.anchorSprites.set(anchor.id, container);
   }
 
+  private getAnchorHaloKey(state: AnchorState): string {
+    switch (state) {
+      case AnchorState.Ready:
+        return 'anchor_halo_ready_g';
+      case AnchorState.Snap:
+        return 'anchor_halo_snap_g';
+      case AnchorState.Locked:
+        return 'anchor_halo_locked_g';
+      default:
+        return 'anchor_halo_ready_g';
+    }
+  }
+
   private updateAnchorHalo(
-    graphics: Phaser.GameObjects.Graphics,
+    halo: Phaser.GameObjects.Image,
     state: AnchorState
   ) {
-    graphics.clear();
-
-    const color = state === AnchorState.Locked ? 0x8fa3bf : 0x2fd5ff;
-    const alpha = state === AnchorState.Locked ? 0.5 : 1.0;
-
-    // 绘制六边形
-    graphics.lineStyle(3, color, alpha);
-    const radius = 32;
-    graphics.beginPath();
-    for (let i = 0; i <= 6; i++) {
-      const angle = (i * Math.PI) / 3;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      if (i === 0) {
-        graphics.moveTo(x, y);
-      } else {
-        graphics.lineTo(x, y);
-      }
-    }
-    graphics.closePath();
-    graphics.strokePath();
-
-    // 中心点
-    graphics.fillStyle(color, alpha);
-    graphics.fillCircle(0, 0, 4);
+    const haloKey = this.getAnchorHaloKey(state);
+    halo.setTexture(haloKey);
   }
 
   private updateAnchorSprites() {
@@ -394,7 +445,7 @@ export class GameScene extends Phaser.Scene {
     for (const anchor of anchors) {
       const sprite = this.anchorSprites.get(anchor.id);
       if (sprite) {
-        const halo = sprite.getData('halo') as Phaser.GameObjects.Graphics;
+        const halo = sprite.getData('halo') as Phaser.GameObjects.Image;
         this.updateAnchorHalo(halo, anchor.state);
       }
     }
@@ -561,16 +612,13 @@ export class GameScene extends Phaser.Scene {
 
   private showMissBadge() {
     if (!this.snapBadge) {
-      this.snapBadge = this.add.text(0, 0, '未吸附', {
-        fontSize: '16px',
-        color: '#fff',
-        backgroundColor: '#f808',
-        padding: { x: 8, y: 4 },
-      });
+      this.snapBadge = this.add.image(0, 0, 'snap_badge_miss_zh_m');
+      this.snapBadge.setScale(0.9);
+    } else {
+      this.snapBadge.setTexture('snap_badge_miss_zh_m');
     }
 
-    this.snapBadge.setPosition(this.madman.x, this.madman.y - 60);
-    this.snapBadge.setOrigin(0.5);
+    this.snapBadge.setPosition(this.madman.x, this.madman.y - 80);
     this.snapBadge.setVisible(true);
 
     this.time.delayedCall(1000, () => {
@@ -591,11 +639,12 @@ export class GameScene extends Phaser.Scene {
       '操作:',
       '  天才: WASD 移动, 鼠标点击放置锚点',
       '  疯子: 方向键移动, Shift 冲刺',
+      '  按 T 键: 打开调参面板',
       '',
-      '调参:',
-      `  吸附半径: ${tuning.madman.snapRadius} 单位`,
-      `  短冲距离: ${tuning.madman.shortDashDistance} 单位`,
-      `  弹射初速: ${tuning.madman.launchSpeedBase} 单位/秒`,
+      '当前调参:',
+      `  吸附半径: ${tuning.madman.snapRadius.toFixed(2)} 单位`,
+      `  短冲距离: ${tuning.madman.shortDashDistance.toFixed(2)} 单位`,
+      `  弹射初速: ${tuning.madman.launchSpeedBase.toFixed(1)} 单位/秒`,
     ];
 
     this.debugPanel!.setText(lines.join('\n'));

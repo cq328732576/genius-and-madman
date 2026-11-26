@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "e2e:shots": "playwright test --project=chromium"
+    "e2e:shots": "playwright test e2e/screenshots.spec.ts --project=chromium"
   },
   "keywords": ["phaser", "typescript", "platformer", "coop"],
   "author": "",

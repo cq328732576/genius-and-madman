@@ -18,6 +18,9 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
+  dom: {
+    createContainer: true,
+  },
   scene: [GameScene],
   scale: {
     mode: Phaser.Scale.FIT,

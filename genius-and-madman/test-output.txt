@@ -1,0 +1,13 @@
+
+> genius-and-madman@1.0.0 test
+> vitest run
+
+
+ RUN  v5.1.2 /workspace/genius-and-madman
+
+
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+   Start at  10:43:37
+   Duration  108ms (import 32%, transform 28%, tests 28%, worker 12%)
+

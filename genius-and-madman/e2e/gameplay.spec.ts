@@ -13,16 +13,20 @@ test.describe('锚点 vs 爆发 - Phase 1 验收测试', () => {
   });
 
   test('场景 1: 有效放置 - 锚点落在可附着表面上', async ({ page }) => {
+    // 等待游戏完全加载
+    await page.waitForTimeout(1000);
+
     // 在地面上点击放置锚点
     await page.mouse.move(640, 800);
     await page.mouse.down();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(200);
     await page.mouse.up();
+    await page.waitForTimeout(500);
 
     // 截图
     await page.screenshot({
-      path: 'artifacts/01-valid-placement.png',
-      fullPage: true,
+      path: 'genius-and-madman/artifacts/01-valid-placement.png',
+      fullPage: false,
     });
 
     // 验证锚点是否可见
@@ -36,15 +40,17 @@ test.describe('锚点 vs 爆发 - Phase 1 验收测试', () => {
   });
 
   test('场景 2: 禁止放置 - 锚点不能落在空中', async ({ page }) => {
+    await page.waitForTimeout(1000);
+
     // 在空中位置尝试放置
     await page.mouse.move(640, 400);
     await page.mouse.down();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(300);
 
     // 截图（应该显示禁止指示器）
     await page.screenshot({
-      path: 'artifacts/02-forbidden-placement.png',
-      fullPage: true,
+      path: 'genius-and-madman/artifacts/02-forbidden-placement.png',
+      fullPage: false,
     });
 
     await page.mouse.up();
