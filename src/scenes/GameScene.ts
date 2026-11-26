@@ -30,15 +30,22 @@ export class GameScene extends Phaser.Scene {
   private snappedAnchorId: string | null = null;
   private aimWindowTimer = 0;
   private dashCooldown = 0;
-  private _consumeAnchor = false; // Phase 2+: 锚点消耗机制（未使用）
+  private consumeAnchor = false; // Phase 2: 锚点消耗机制
   public testHoldDash = false; // E2E测试钩子：模拟按住冲刺键
   private prevShift = false; // Shift边缘检测
+  private aimDirection: Vec2 = { x: 0, y: -1 }; // Phase 2: 瞄准方向（默认向上）
+  private incomingDashDir: Vec2 = { x: 1, y: 0 }; // Phase 2: 冲刺进入方向
+  private cKeyDown = false; // Phase 2: C键状态
+  private lastLaunchSpeed = 0; // Phase 2: 最后一次发射的速度（u/s）
+  private launchAirTime = -1; // Phase 2: 发射后空中时间（-1表示未发射，≥0表示发射后）
+  private lastLaunch = { vx: 0, vy: 0, x: 0, y: 0 }; // Phase 2: 最后一次发射的瞬时状态（px/s, px）
 
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
   private aimRayTiles: Phaser.GameObjects.Image[] = [];
   private aimReticle: Phaser.GameObjects.Image | null = null;
   private snapBadge: Phaser.GameObjects.Image | null = null;
+  private trajectoryDots: Phaser.GameObjects.Graphics[] = []; // Phase 2: 轨迹预览点
 
   // 调试面板
   private debugPanel: Phaser.GameObjects.Text | null = null;
@@ -90,6 +97,14 @@ export class GameScene extends Phaser.Scene {
     this.load.image('snap_badge_snap_zh_m', 'assets/snap_badge_snap_zh_m.png');
     this.load.image('snap_badge_miss_zh_m', 'assets/snap_badge_miss_zh_m.png');
     this.load.image('snap_badge_inuse_zh_g', 'assets/snap_badge_inuse_zh_g.png');
+    
+    // Phase 2: 加载「已吸附」徽标
+    this.load.image('snap_badge_snapped_zh_g', 'assets/snap_badge_snapped_zh_g.png');
+    this.load.image('snap_badge_snapped_zh_m', 'assets/snap_badge_snapped_zh_m.png');
+    
+    // Phase 2: 加载粗吸附半径环
+    this.load.image('snap_ring_bold_g', 'assets/snap_ring_bold_g.png');
+    this.load.image('snap_ring_bold_m', 'assets/snap_ring_bold_m.png');
   }
 
   create() {
@@ -250,6 +265,14 @@ export class GameScene extends Phaser.Scene {
     this.shiftKey = this.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.SHIFT
     );
+
+    // Phase 2: C键用于消耗锚点
+    this.input.keyboard!.on('keydown-C', () => {
+      this.cKeyDown = true;
+    });
+    this.input.keyboard!.on('keyup-C', () => {
+      this.cKeyDown = false;
+    });
 
     // 鼠标点击放置锚点
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -469,14 +492,15 @@ export class GameScene extends Phaser.Scene {
     halo.setScale(0.5); // 外径约 2.2 单位 ≈ 108px
     container.add(halo);
 
-    // 吸附半径环（疯子视角用 _m 变体）
-    const snapRadius = tuning.madman.snapRadius * tuning.world.pixelsPerUnit;
-    const snapRing = this.add.image(0, 0, 'snap_ring_thin_m');
-    // 环半径 118px ↔ 判定半径 2.0 单位，缩放 = (2.0×32)/118 ≈ 0.54
-    const ringScale = snapRadius / 118;
+    // Phase 2: 吸附半径环（使用粗环美术资源）
+    // snapRadius已经是像素: 2.0u * 32px/u = 64px
+    const snapRadiusPx = tuning.madman.snapRadius * tuning.world.pixelsPerUnit;
+    const snapRing = this.add.image(0, 0, 'snap_ring_bold_m');
+    // 环纹理半径 118px，缩放 = 64/118 ≈ 0.542
+    const ringScale = snapRadiusPx / 118;
     snapRing.setScale(ringScale);
-    snapRing.setAlpha(0.4);
-    snapRing.setVisible(false);
+    snapRing.setAlpha(0.9); // 更高不透明度以更清晰可见
+    snapRing.setVisible(true); // 始终可见
     container.add(snapRing);
 
     // 可吸附徽标
@@ -551,9 +575,35 @@ export class GameScene extends Phaser.Scene {
     const speed = 200;
     const body = this.madman.body as Phaser.Physics.Arcade.Body;
 
+    // Phase 2: 发射后空中时间管理
+    const isAirborne = this.launchAirTime >= 0;
+    if (isAirborne) {
+      this.launchAirTime += dt;
+      
+      // 落地检测：给予延迟让疯子先离开地面，之后才检测落地
+      if (this.launchAirTime > tuning.madman.launchLandingGraceS && 
+          (body.blocked.down || body.touching.down)) {
+        this.launchAirTime = -1;
+      }
+      
+      // 发射后输入锁定期间，完全由发射速度控制，不接受输入
+      if (this.launchAirTime < tuning.madman.launchInputLockS) {
+        return; // 完全跳过移动控制，保持发射动量
+      }
+    }
+
     // 吸附状态
     if (this.isSnapped) {
       this.aimWindowTimer += dt;
+
+      // Phase 2: 方向键选择瞄准方向
+      this.updateAimDirection();
+
+      // Phase 2: 更新消耗锚点状态
+      this.consumeAnchor = this.cKeyDown;
+
+      // Phase 2: 显示轨迹预览
+      this.updateTrajectoryPreview();
 
       // 窗口逻辑：按住冲刺键延长，但释放不会提前结束
       const held = this.shiftKey.isDown || (this as any).testHoldDash;
@@ -566,14 +616,22 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Phase 2: 清除轨迹预览
+    this.clearTrajectoryPreview();
+
     // 正常移动
+    // Phase 2: 发射后空中时不清零vx，保持动量
+    const isAirborneLaunch = this.launchAirTime >= 0;
+    
     if (this.cursors.left!.isDown) {
       body.setVelocityX(-speed);
     } else if (this.cursors.right!.isDown) {
       body.setVelocityX(speed);
-    } else {
+    } else if (!isAirborneLaunch) {
+      // 只在非空中发射状态时清零vx
       body.setVelocityX(0);
     }
+    // 空中发射且无按键时：保持vx，不修改
 
     // 冲刺（边缘检测：仅在按下时触发，不在持续按住时）
     const shiftPressed = this.shiftKey.isDown && !this.prevShift;
@@ -594,6 +652,9 @@ export class GameScene extends Phaser.Scene {
     } else if (this.cursors.right!.isDown) {
       direction = { x: 1, y: 0 };
     }
+
+    // Phase 2: 记录进入方向
+    this.incomingDashDir = { ...direction };
 
     // 检查吸附
     const dashPath = {
@@ -625,6 +686,9 @@ export class GameScene extends Phaser.Scene {
       this.aimWindowTimer = 0;
       this.anchorSystem.lockAnchor(snapResult.anchorId!);
 
+      // Phase 2: 初始化瞄准方向为锚点的发射轴（默认向上）
+      this.aimDirection = { x: 0, y: -1 };
+
       // 移动到悬停点并禁用重力
       const hoverPixels = this.unitsToPixels(
         snapResult.hoverPoint.x,
@@ -636,8 +700,8 @@ export class GameScene extends Phaser.Scene {
       const body = this.madman.body as Phaser.Physics.Arcade.Body;
       body.allowGravity = false;
       
-      // 显示吸附徽标
-      this.showSnapBadge();
+      // Phase 2: 显示「已吸附」徽标
+      this.showSnappedBadge();
     } else {
       // 短冲刺
       this.performShortDash(direction);
@@ -670,24 +734,178 @@ export class GameScene extends Phaser.Scene {
   }
 
   private launchFromAnchor() {
-    // Phase 1: 禁用弹射机制
-    // 瞄准窗口结束后，疯子简单释放/坠落
-    
     if (!this.snappedAnchorId) return;
 
-    // 解锁锚点（但不移除）
-    this.anchorSystem.unlockAnchor(this.snappedAnchorId);
+    // Phase 2: 计算弹射速度（使用向上的发射轴）
+    const launchVelocity = this.anchorSystem.calculateLaunchVelocity(
+      this.incomingDashDir,
+      this.aimDirection,
+      this.consumeAnchor,
+      { x: 0, y: -1 } // 发射轴向上
+    );
 
-    // 简单释放：清除水平速度，恢复重力
-    this.madman.setVelocityX(0);
+    // 记录发射时刻的速度（u/s）
+    this.lastLaunchSpeed = Math.sqrt(
+      launchVelocity.x * launchVelocity.x + 
+      launchVelocity.y * launchVelocity.y
+    );
+
+    // Phase 2: 如果消耗锚点，则移除锚点
+    if (this.consumeAnchor) {
+      this.anchorSystem.removeAnchor(this.snappedAnchorId);
+    } else {
+      // 解锁锚点（但不移除）
+      this.anchorSystem.unlockAnchor(this.snappedAnchorId);
+    }
+
+    // Phase 2: 应用弹射速度（转换为像素/秒）
+    const ppu = tuning.world.pixelsPerUnit;
+    const vxPx = launchVelocity.x * ppu;
+    const vyPx = launchVelocity.y * ppu;
+    this.madman.setVelocity(vxPx, vyPx);
+
+    // 恢复重力
     const body = this.madman.body as Phaser.Physics.Arcade.Body;
     body.allowGravity = true;
 
+    // 记录发射瞬时状态（供测试使用）
+    this.lastLaunch = {
+      vx: vxPx,
+      vy: vyPx,
+      x: this.madman.x,
+      y: this.madman.y
+    };
+
     this.isSnapped = false;
     this.snappedAnchorId = null;
+    this.consumeAnchor = false;
+    this.launchAirTime = 0; // 开始计时空中时间
     
-    // 隐藏吸附徽标
-    this.hideSnapBadge();
+    // Phase 2: 隐藏「已吸附」徽标
+    this.hideSnappedBadge();
+
+    // Phase 2: 清除轨迹预览
+    this.clearTrajectoryPreview();
+  }
+
+  private updateAimDirection() {
+    // Phase 2: 方向键选择瞄准方向
+    let inputX = 0;
+    let inputY = 0;
+
+    if (this.cursors.left!.isDown) inputX = -1;
+    if (this.cursors.right!.isDown) inputX = 1;
+    if (this.cursors.up!.isDown) inputY = -1;
+    if (this.cursors.down!.isDown) inputY = 1;
+
+    // 如果有输入，更新瞄准方向
+    if (inputX !== 0 || inputY !== 0) {
+      const len = Math.sqrt(inputX * inputX + inputY * inputY);
+      this.aimDirection = { x: inputX / len, y: inputY / len };
+    }
+  }
+
+  private updateTrajectoryPreview() {
+    // Phase 2: 显示轨迹预览
+    this.clearTrajectoryPreview();
+
+    if (!this.snappedAnchorId) return;
+
+    // 计算弹射速度（使用向上的发射轴）
+    const launchVelocity = this.anchorSystem.calculateLaunchVelocity(
+      this.incomingDashDir,
+      this.aimDirection,
+      this.consumeAnchor,
+      { x: 0, y: -1 }
+    );
+
+    // 计算轨迹点
+    const madmanPos = this.pixelsToUnits(this.madman.x, this.madman.y);
+    const gravity = this.physics.world.gravity.y / tuning.world.pixelsPerUnit; // 转换为单位/秒²
+    const trajectoryPoints = this.anchorSystem.calculateTrajectory(
+      madmanPos,
+      launchVelocity,
+      gravity,
+      tuning.madman.trajectoryDotCount,
+      tuning.madman.trajectoryTimeStep
+    );
+
+    // 渲染轨迹点，在碰撞地面时停止
+    const groundY = 25; // 单位坐标
+    for (const point of trajectoryPoints) {
+      // 检查是否碰到地面
+      if (point.y >= groundY) break;
+      
+      const pixelPos = this.unitsToPixels(point.x, point.y);
+      const dot = this.add.graphics();
+      dot.fillStyle(0xffffff, 0.6);
+      dot.fillCircle(pixelPos.x, pixelPos.y, 3);
+      this.trajectoryDots.push(dot);
+    }
+    
+    // 绘制锥角边缘（±70°从向上轴）
+    this.drawConeEdges();
+  }
+
+  private drawConeEdges() {
+    // 绘制两条锥角边缘线
+    if (!this.snappedAnchorId || !this.madman) return;
+    
+    const coneAngle = tuning.madman.coneHalfAngleDeg;
+    const lineLength = 200; // 像素
+    const startX = this.madman.x;
+    const startY = this.madman.y;
+    
+    // 向上轴 = -90°
+    const axisAngle = -90 * Math.PI / 180;
+    
+    // 左边缘
+    const leftAngle = axisAngle - coneAngle * Math.PI / 180;
+    const leftEndX = startX + Math.cos(leftAngle) * lineLength;
+    const leftEndY = startY + Math.sin(leftAngle) * lineLength;
+    
+    const leftLine = this.add.graphics();
+    leftLine.lineStyle(2, 0xffaa00, 0.5);
+    leftLine.lineBetween(startX, startY, leftEndX, leftEndY);
+    this.trajectoryDots.push(leftLine);
+    
+    // 右边缘
+    const rightAngle = axisAngle + coneAngle * Math.PI / 180;
+    const rightEndX = startX + Math.cos(rightAngle) * lineLength;
+    const rightEndY = startY + Math.sin(rightAngle) * lineLength;
+    
+    const rightLine = this.add.graphics();
+    rightLine.lineStyle(2, 0xffaa00, 0.5);
+    rightLine.lineBetween(startX, startY, rightEndX, rightEndY);
+    this.trajectoryDots.push(rightLine);
+  }
+
+  private clearTrajectoryPreview() {
+    // Phase 2: 清除轨迹预览
+    for (const dot of this.trajectoryDots) {
+      dot.destroy();
+    }
+    this.trajectoryDots = [];
+  }
+
+  private showSnappedBadge() {
+    // Phase 2: 显示「已吸附」徽标（使用真实美术资源）
+    if (!this.snapBadge) {
+      this.snapBadge = this.add.image(0, 0, 'snap_badge_snapped_zh_m');
+      this.snapBadge.setScale(0.9);
+    } else {
+      this.snapBadge.setTexture('snap_badge_snapped_zh_m');
+    }
+
+    this.snapBadge.setPosition(this.madman.x, this.madman.y - 80);
+    this.snapBadge.setVisible(true);
+  }
+
+  private hideSnappedBadge() {
+    // Phase 2: 隐藏「已吸附」徽标
+    if (this.snapBadge) {
+      this.snapBadge.setVisible(false);
+    }
   }
 
   private showMissBadge() {
@@ -708,41 +926,61 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private showSnapBadge() {
-    if (!this.snapBadge) {
-      this.snapBadge = this.add.image(0, 0, 'snap_badge_snap_zh_m');
-      this.snapBadge.setScale(0.9);
-    } else {
-      this.snapBadge.setTexture('snap_badge_snap_zh_m');
-    }
-
-    this.snapBadge.setPosition(this.madman.x, this.madman.y - 80);
-    this.snapBadge.setVisible(true);
-  }
-
-  private hideSnapBadge() {
-    if (this.snapBadge) {
-      this.snapBadge.setVisible(false);
-    }
-  }
 
   private updateDebugPanel() {
     const anchors = this.anchorSystem.getAnchors();
+    
+    // Phase 2: 计算三个角度值
+    let rawAngle = 0;
+    let clampedAngle = 0;
+    let finalAngle = 0;
+    let launchSpeed = 0;
+    
+    if (this.isSnapped) {
+      const angles = this.anchorSystem.calculateAimAngles(
+        this.incomingDashDir,
+        this.aimDirection,
+        { x: 0, y: -1 } // 发射轴向上
+      );
+      rawAngle = angles.rawAngle;
+      clampedAngle = angles.clampedAngle;
+      finalAngle = angles.finalAngle;
+      
+      // 计算发射速度（calculateLaunchVelocity返回值已经是u/s）
+      const launchVelocity = this.anchorSystem.calculateLaunchVelocity(
+        this.incomingDashDir,
+        this.aimDirection,
+        this.consumeAnchor,
+        { x: 0, y: -1 }
+      );
+      launchSpeed = Math.sqrt(
+        launchVelocity.x * launchVelocity.x + 
+        launchVelocity.y * launchVelocity.y
+      ); // 不需要除以pixelsPerUnit，已经是u/s
+    }
+    
     const lines = [
       `锚点数: ${anchors.length}/${tuning.genius.maxAnchors}`,
       `冲刺冷却: ${this.dashCooldown.toFixed(2)}s`,
       `是否吸附: ${this.isSnapped ? '是' : '否'}`,
       `瞄准窗口: ${this.isSnapped ? this.aimWindowTimer.toFixed(2) : '-'}s`,
+      `原始输入: ${this.isSnapped ? rawAngle.toFixed(1) + '°' : '-'}`,
+      `限制瞄准: ${this.isSnapped ? clampedAngle.toFixed(1) + '°' : '-'}`,
+      `最终发射: ${this.isSnapped ? finalAngle.toFixed(1) + '°' : '-'}`,
+      `发射速度: ${this.isSnapped ? launchSpeed.toFixed(1) + ' u/s' : this.lastLaunchSpeed > 0 ? this.lastLaunchSpeed.toFixed(1) + ' u/s' : '-'}`,
+      `消耗锚点: ${this.consumeAnchor ? '是' : '否'}`,
       '',
       '操作:',
       '  天才: WASD 移动, 鼠标点击放置锚点',
       '  疯子: 方向键移动, Shift 冲刺',
+      '  吸附时: 方向键瞄准, C键消耗锚点',
       '  按 T 键: 打开调参面板',
       '',
-      'Phase 1 范围:',
+      'Phase 2 范围:',
       '  ✅ 锚点放置 + FIFO + 锁定',
       '  ✅ 冲刺吸附 + 瞄准窗口',
-      '  ❌ 弹射（Phase 2）',
+      '  ✅ 方向瞄准 + 轨迹预览',
+      '  ✅ 弹射发射 + 保留/消耗',
     ];
 
     this.debugPanel!.setText(lines.join('\n'));

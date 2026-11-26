@@ -118,7 +118,8 @@ test.describe('Phase 1 验收测试', () => {
     expect(finalState.badgeTexture).toBe('snap_badge_miss_zh_m');
   });
 
-  test('锁定行为 - A锁定B自由则B被替换', async ({ page }) => {
+  test('锁定行为 - A锚点锁定B自由则B被替换', async ({ page }) => {
+    // Phase 2注意: 瞄准窗口最大0.50s，放置锚点必须在窗口内完成避免自动发射
     await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       
@@ -148,10 +149,12 @@ test.describe('Phase 1 验收测试', () => {
     expect(state.anchorsCount).toBe(2); // A和B
     
     // 尝试放置第3个锚点（应替换B，A被锁定）
-    await page.mouse.move(1000, 768);
-    await page.mouse.down();
-    await page.waitForTimeout(500);
-    await page.mouse.up();
+    // Phase 2: 直接调用placeAnchor API，避免窗口过期
+    await page.evaluate(() => {
+      window.__TEST_API__.freeze();
+      window.__TEST_API__.placeAnchorAt(1000 / 32, 768 / 32);
+      window.__TEST_API__.unfreeze();
+    });
     
     state = await page.evaluate(() => window.__TEST_API__.getState());
     
@@ -163,6 +166,7 @@ test.describe('Phase 1 验收测试', () => {
   test('锁定行为 - 所有锚点锁定则放置失败', async ({ page }) => {
     // 注意：在max=2+单疯子情况下，这种情况理论上不可能（只能锁定1个）
     // 但我们可以测试单锚点锁定的情况
+    // Phase 2注意: 瞄准窗口最大0.50s，放置锚点必须在窗口内完成避免自动发射
     
     await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
@@ -189,16 +193,24 @@ test.describe('Phase 1 验收测试', () => {
     expect(state.anchorsCount).toBe(1);
     
     // 尝试放置第2个锚点（应该成功，因为只有1个）
-    await page.mouse.move(900, 768);
-    await page.mouse.down();
-    await page.waitForTimeout(500);
+    // Phase 2: 直接调用placeAnchor API，避免窗口过期
+    await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      window.__TEST_API__.freeze();
+      window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
+      window.__TEST_API__.unfreeze();
+    });
     
     state = await page.evaluate(() => window.__TEST_API__.getState());
     expect(state.anchorsCount).toBe(2); // 成功放置第2个
     
     // 现在尝试放置第3个（此时有2个：A锁定，B自由）
-    await page.mouse.move(1200, 768);
-    await page.waitForTimeout(500);
+    // Phase 2: 直接调用placeAnchor API
+    await page.evaluate(() => {
+      window.__TEST_API__.freeze();
+      window.__TEST_API__.placeAnchorAt(1200 / 32, 768 / 32);
+      window.__TEST_API__.unfreeze();
+    });
     
     state = await page.evaluate(() => window.__TEST_API__.getState());
     // 应该仍然是2个（B被替换或显示使用中提示）
