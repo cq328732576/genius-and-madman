@@ -11,6 +11,7 @@ import { TuningPanel } from '../ui/TuningPanel';
 export class GameScene extends Phaser.Scene {
   private anchorSystem!: AnchorSystem;
   private surfaces: Surface[] = [];
+  private platforms!: Phaser.Physics.Arcade.StaticGroup;
 
   // 角色
   private genius!: Phaser.Physics.Arcade.Sprite;
@@ -120,10 +121,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTestLevel() {
+    // 保存静态平台供碰撞检测
+    this.platforms = this.physics.add.staticGroup();
 
     // 创建地面
     const ground = this.add.rectangle(640, 800, 1280, 64, 0x4a4a4a);
-    this.physics.add.existing(ground, true);
+    this.platforms.add(ground);
 
     this.surfaces.push({
       id: 'ground',
@@ -138,7 +141,7 @@ export class GameScene extends Phaser.Scene {
 
     // 创建墙壁
     const wall = this.add.rectangle(1200, 600, 64, 400, 0x6a6a6a);
-    this.physics.add.existing(wall, true);
+    this.platforms.add(wall);
 
     this.surfaces.push({
       id: 'wall',
@@ -153,7 +156,7 @@ export class GameScene extends Phaser.Scene {
 
     // 创建平台（可附着）
     const platform1 = this.add.rectangle(400, 600, 192, 32, 0x5a9a5a);
-    this.physics.add.existing(platform1, true);
+    this.platforms.add(platform1);
 
     this.surfaces.push({
       id: 'platform1',
@@ -168,7 +171,7 @@ export class GameScene extends Phaser.Scene {
 
     // 创建不可附着平台（红色）
     const platform2 = this.add.rectangle(800, 500, 192, 32, 0x9a5a5a);
-    this.physics.add.existing(platform2, true);
+    this.platforms.add(platform2);
 
     // 添加标签
     this.add.text(400, 630, '可附着', {
@@ -191,23 +194,30 @@ export class GameScene extends Phaser.Scene {
 
   private createCharacters() {
     const ppu = tuning.world.pixelsPerUnit;
-    const charHeight = tuning.world.characterHeight * ppu;
+    const charHeight = tuning.world.characterHeight * ppu; // 1.8 * 32 = 58px
 
-    // 天才（蓝色） - 生成在左侧平台上
-    this.genius = this.physics.add.sprite(400, 600 - charHeight/2 - 20, 'genius_char');
+    // 平台1顶部 = 600 - 32/2 = 584
+    const platform1Top = 584;
+
+    // 天才（蓝色） - 站在左侧平台上
+    this.genius = this.physics.add.sprite(400, platform1Top, 'genius_char');
     this.genius.setOrigin(0.5, 1); // 底部对齐
-    this.physics.world.enable(this.genius);
     const geniusBody = this.genius.body as Phaser.Physics.Arcade.Body;
     geniusBody.setCollideWorldBounds(true);
     geniusBody.setSize(charHeight * 0.5, charHeight);
+    geniusBody.setOffset((charHeight * 0.5) / 4, 0); // 居中碰撞体
 
-    // 疯子（橙色） - 生成在左侧平台上
-    this.madman = this.physics.add.sprite(500, 600 - charHeight/2 - 20, 'madman_char');
+    // 疯子（橙色） - 站在左侧平台上
+    this.madman = this.physics.add.sprite(500, platform1Top, 'madman_char');
     this.madman.setOrigin(0.5, 1); // 底部对齐
-    this.physics.world.enable(this.madman);
     const madmanBody = this.madman.body as Phaser.Physics.Arcade.Body;
     madmanBody.setCollideWorldBounds(true);
     madmanBody.setSize(charHeight * 0.5, charHeight);
+    madmanBody.setOffset((charHeight * 0.5) / 4, 0); // 居中碰撞体
+
+    // 添加碰撞检测
+    this.physics.add.collider(this.genius, this.platforms);
+    this.physics.add.collider(this.madman, this.platforms);
 
     // 添加标签
     this.add.text(0, 0, '天才', {
@@ -662,10 +672,10 @@ export class GameScene extends Phaser.Scene {
       '  疯子: 方向键移动, Shift 冲刺',
       '  按 T 键: 打开调参面板',
       '',
-      '当前调参:',
-      `  吸附半径: ${tuning.madman.snapRadius.toFixed(2)} 单位`,
-      `  短冲距离: ${tuning.madman.shortDashDistance.toFixed(2)} 单位`,
-      `  弹射初速: ${tuning.madman.launchSpeedBase.toFixed(1)} 单位/秒`,
+      'Phase 1 范围:',
+      '  ✅ 锚点放置 + FIFO + 锁定',
+      '  ✅ 冲刺吸附 + 瞄准窗口',
+      '  ❌ 弹射（Phase 2）',
     ];
 
     this.debugPanel!.setText(lines.join('\n'));
