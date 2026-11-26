@@ -2,22 +2,41 @@
  * Phase 2 演示视频录制
  * 展示：吸附、方向瞄准+轨迹预览、保留锚点发射、消耗锚点发射
  */
-import { test } from '@playwright/test';
+import { test, chromium } from '@playwright/test';
 import * as path from 'path';
 
 test.describe('Phase 2 演示视频', () => {
-  test('录制完整演示', async ({ page, context }) => {
-    // 配置视频录制
+  test('录制完整演示', async () => {
+    // 创建浏览器和上下文，配置视频录制
     const videoDir = path.join(process.cwd(), 'docs/evidence/phase2');
     
-    await page.goto('/', { waitUntil: 'networkidle' });
+    const browser = await chromium.launch({
+      args: [
+        '--use-gl=swiftshader',
+        '--enable-unsafe-swiftshader',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--no-sandbox',
+      ],
+    });
+    
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 720 },
+      recordVideo: {
+        dir: videoDir,
+        size: { width: 1280, height: 720 },
+      },
+    });
+    
+    const page = await context.newPage();
+    await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
     await page.waitForSelector('canvas', { timeout: 15000 });
     await page.waitForFunction(() => {
       return window.__GAME__ && window.__TEST_API__ && 
              window.__GAME__.scene.scenes[0] && 
              window.__GAME__.scene.scenes[0].sys.isActive();
     }, { timeout: 15000 });
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
 
     // 场景1: 吸附
     await page.evaluate(() => {
@@ -26,7 +45,7 @@ test.describe('Phase 2 演示视频', () => {
       scene.madman.setPosition(785, 768);
       scene.dashCooldown = 0;
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // 执行冲刺并吸附
     await page.evaluate(() => {
@@ -34,7 +53,7 @@ test.describe('Phase 2 演示视频', () => {
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
     });
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(2000);
 
     // 场景2: 方向瞄准 + 轨迹预览（扫向锥角边缘）
     // 从向上开始
@@ -42,29 +61,36 @@ test.describe('Phase 2 演示视频', () => {
       window.__TEST_API__.setAimDirection(0, -1);
       window.__TEST_API__.step(16.67);
     });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1500);
 
-    // 扫向右边缘
+    // 慢慢扫向右边缘
     for (let i = 0; i <= 10; i++) {
       await page.evaluate((angle) => {
         const rad = angle * Math.PI / 180;
         window.__TEST_API__.setAimDirection(Math.sin(rad), -Math.cos(rad));
         window.__TEST_API__.step(16.67);
       }, i * 7); // 0 to 70 degrees
-      await page.waitForTimeout(80);
+      await page.waitForTimeout(150);
     }
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1500);
 
-    // 扫回到中间
-    for (let i = 10; i >= 0; i--) {
+    // 慢慢扫向左边缘
+    for (let i = 0; i <= 14; i++) {
       await page.evaluate((angle) => {
-        const rad = angle * Math.PI / 180;
+        const rad = -angle * Math.PI / 180;
         window.__TEST_API__.setAimDirection(Math.sin(rad), -Math.cos(rad));
         window.__TEST_API__.step(16.67);
-      }, i * 3); // back to 0
-      await page.waitForTimeout(80);
+      }, i * 10); // 0 to -140 degrees (both edges)
+      await page.waitForTimeout(150);
     }
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1500);
+    
+    // 回到向上
+    await page.evaluate(() => {
+      window.__TEST_API__.setAimDirection(0, -1);
+      window.__TEST_API__.step(16.67);
+    });
+    await page.waitForTimeout(1000);
 
     // 场景3: 保留锚点发射
     await page.evaluate(() => {
@@ -72,13 +98,13 @@ test.describe('Phase 2 演示视频', () => {
       window.__TEST_API__.setConsume(false);
       window.__TEST_API__.step(16.67);
     });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1500);
 
     // 触发发射
     await page.evaluate(() => {
       window.__TEST_API__.step(300); // 等待瞄准窗口结束
     });
-    await page.waitForTimeout(2000); // 观察飞行
+    await page.waitForTimeout(3000); // 观察完整飞行弧线
 
     // 场景4: 准备第二次吸附并消耗
     await page.evaluate(() => {
@@ -90,7 +116,7 @@ test.describe('Phase 2 演示视频', () => {
       scene.madman.setPosition(785, 768);
       scene.dashCooldown = 0;
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // 再次吸附
     await page.evaluate(() => {
@@ -98,7 +124,7 @@ test.describe('Phase 2 演示视频', () => {
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     // 场景5: 消耗锚点发射（按C键）
     await page.evaluate(() => {
@@ -106,15 +132,16 @@ test.describe('Phase 2 演示视频', () => {
       window.__TEST_API__.setConsume(true); // 消耗模式
       window.__TEST_API__.step(16.67);
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // 触发消耗发射
     await page.evaluate(() => {
       window.__TEST_API__.step(300); // 等待瞄准窗口结束
     });
-    await page.waitForTimeout(2000); // 观察飞行
+    await page.waitForTimeout(3500); // 观察完整飞行弧线（更高）
 
     // 保存视频
     await context.close();
+    await browser.close();
   });
 });

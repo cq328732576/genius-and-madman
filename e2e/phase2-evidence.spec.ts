@@ -138,8 +138,8 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
       // 等待瞄准窗口结束（触发发射）
       window.__TEST_API__.step(300);
       
-      // 发射后等待几帧让疯子离开地面
-      window.__TEST_API__.step(100);
+      // 发射后等待0.15-0.2s让疯子明显在空中
+      window.__TEST_API__.step(175);
 
       return { beforeAnchors };
     });
