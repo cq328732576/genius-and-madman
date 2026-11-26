@@ -37,6 +37,7 @@ export class GameScene extends Phaser.Scene {
   private incomingDashDir: Vec2 = { x: 1, y: 0 }; // Phase 2: 冲刺进入方向
   private cKeyDown = false; // Phase 2: C键状态
   private lastLaunchSpeed = 0; // Phase 2: 最后一次发射的速度（u/s）
+  private launchAirTime = -1; // Phase 2: 发射后空中时间（-1表示未发射，≥0表示发射后）
 
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -573,6 +574,23 @@ export class GameScene extends Phaser.Scene {
     const speed = 200;
     const body = this.madman.body as Phaser.Physics.Arcade.Body;
 
+    // Phase 2: 发射后空中时间管理
+    const isAirborne = this.launchAirTime >= 0;
+    if (isAirborne) {
+      this.launchAirTime += dt;
+      
+      // 落地检测：给予0.1s延迟让疯子先离开地面，之后才检测落地
+      if (this.launchAirTime > 100 && (body.blocked.down || body.touching.down)) {
+        this.launchAirTime = -1;
+      }
+      
+      // 在发射后的前0.5s，完全由发射速度控制，不接受输入
+      // 之后允许有限的空中控制
+      if (this.launchAirTime < 500) {
+        return; // 完全跳过移动控制，保持发射动量
+      }
+    }
+
     // 吸附状态
     if (this.isSnapped) {
       this.aimWindowTimer += dt;
@@ -736,10 +754,10 @@ export class GameScene extends Phaser.Scene {
 
     // Phase 2: 应用弹射速度（转换为像素/秒）
     const ppu = tuning.world.pixelsPerUnit;
-    this.madman.setVelocity(
-      launchVelocity.x * ppu,
-      launchVelocity.y * ppu
-    );
+    const vxPx = launchVelocity.x * ppu;
+    const vyPx = launchVelocity.y * ppu;
+    console.log('[Launch] velocity u/s:', launchVelocity, 'px/s:', {x: vxPx, y: vyPx});
+    this.madman.setVelocity(vxPx, vyPx);
 
     // 恢复重力
     const body = this.madman.body as Phaser.Physics.Arcade.Body;
@@ -748,6 +766,7 @@ export class GameScene extends Phaser.Scene {
     this.isSnapped = false;
     this.snappedAnchorId = null;
     this.consumeAnchor = false;
+    this.launchAirTime = 0; // 开始计时空中时间
     
     // Phase 2: 隐藏「已吸附」徽标
     this.hideSnappedBadge();

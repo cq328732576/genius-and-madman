@@ -108,13 +108,26 @@ window.__TEST_API__ = {
   step: (ms: number) => {
     const scene = game.scene.scenes[0] as any;
     if (!scene) return;
-    const dt = 16.67; // 60 FPS
+    const dt = 16.67; // 60 FPS (毫秒)
     const steps = Math.ceil(ms / dt);
     for (let i = 0; i < steps; i++) {
-      // 推进场景更新
+      // 1. 更新场景逻辑
       scene.update(0, dt);
-      // 推进物理引擎
-      scene.physics.world.step(dt / 1000);
+      
+      // 2. 更新物理世界
+      scene.physics.world.update(0, dt);
+      
+      // 3. 手动同步sprite位置从body
+      const geniusBody = scene.genius.body;
+      if (geniusBody) {
+        scene.genius.x = geniusBody.x + geniusBody.halfWidth;
+        scene.genius.y = geniusBody.y + geniusBody.halfHeight;
+      }
+      const madmanBody = scene.madman.body;
+      if (madmanBody) {
+        scene.madman.x = madmanBody.x + madmanBody.halfWidth;
+        scene.madman.y = madmanBody.y + madmanBody.halfHeight;
+      }
     }
   },
   // 触发冲刺（模拟按键并步进）
