@@ -239,7 +239,7 @@ describe('AnchorSystem', () => {
       expect(result.snapped).toBe(false);
     });
 
-    it('悬停点应该在锚点外侧 0.6 单位', () => {
+    it('悬停点应该在锚点外侧并包含垂直偏移', () => {
       const anchor = system.placeAnchor({ x: 10, y: 10 }, 'ground');
 
       const dashPath: DashPath = {
@@ -253,12 +253,18 @@ describe('AnchorSystem', () => {
       expect(result.snapped).toBe(true);
       expect(result.hoverPoint).toBeDefined();
 
-      // 验证悬停点距离
-      const dist = Math.sqrt(
-        Math.pow(result.hoverPoint!.x - anchor!.position.x, 2) +
-        Math.pow(result.hoverPoint!.y - anchor!.position.y, 2)
-      );
-      expect(dist).toBeCloseTo(0.6, 2);
+      // Phase 2: 悬停点现在包含垂直偏移（角色高度的一半：0.9单位）
+      // 水平距离应该是 0.6 单位
+      const hoverDist = defaultTuning.madman.hoverDistance;
+      const verticalOffset = defaultTuning.world.characterHeight / 2;
+      
+      const dx = result.hoverPoint!.x - anchor!.position.x;
+      const dy = result.hoverPoint!.y - anchor!.position.y;
+      
+      // 检查水平距离
+      expect(Math.abs(dx)).toBeCloseTo(hoverDist, 1);
+      // 检查垂直偏移
+      expect(dy).toBeCloseTo(-verticalOffset, 1);
     });
   });
 
@@ -422,6 +428,150 @@ describe('AnchorSystem', () => {
 
       const remaining = system.getAnchors();
       expect(remaining.find((a) => a.id === anchor1!.id)).toBeUndefined();
+    });
+  });
+
+  describe('Phase 2: 方向限制（锥角）', () => {
+    it('应该限制瞄准方向在±70°锥角内', () => {
+      const approachDir: Vec2 = { x: 0, y: -1 }; // 向上
+      const inputDir: Vec2 = { x: 1, y: 0 }; // 向右（90°偏离）
+
+      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, false);
+
+      // 计算角度
+      const angle = Math.atan2(velocity.y, velocity.x) * (180 / Math.PI);
+      const approachAngle = Math.atan2(approachDir.y, approachDir.x) * (180 / Math.PI);
+      
+      // 计算角度差（考虑角度环绕）
+      let diff = Math.abs(angle - approachAngle);
+      if (diff > 180) diff = 360 - diff;
+
+      // 应该在锥角内（70度）
+      expect(diff).toBeLessThanOrEqual(defaultTuning.madman.coneHalfAngleDeg + 1); // +1 容差
+    });
+
+    it('在锥角内的方向应该不被限制', () => {
+      const approachDir: Vec2 = { x: 0, y: -1 }; // 向上
+      const inputDir: Vec2 = { x: 0.5, y: -0.866 }; // 30°偏离
+
+      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, false);
+
+      // 归一化速度方向
+      const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+      const normalizedVel = { x: velocity.x / speed, y: velocity.y / speed };
+
+      // 应该保持原方向（混合后）
+      const angle = Math.atan2(normalizedVel.y, normalizedVel.x) * (180 / Math.PI);
+      const approachAngle = Math.atan2(approachDir.y, approachDir.x) * (180 / Math.PI);
+      
+      let diff = Math.abs(angle - approachAngle);
+      if (diff > 180) diff = 360 - diff;
+
+      expect(diff).toBeLessThanOrEqual(70);
+    });
+  });
+
+  describe('Phase 2: 速度混合', () => {
+    it('应该按权重混合进入方向和瞄准方向', () => {
+      const approachDir: Vec2 = { x: 1, y: 0 }; // 向右
+      const inputDir: Vec2 = { x: 0, y: -1 }; // 向上
+      const w = defaultTuning.madman.launchAimWeight; // 0.60
+
+      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, false);
+
+      // 归一化速度方向
+      const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+      const normalizedVel = { x: velocity.x / speed, y: velocity.y / speed };
+
+      // 计算预期混合方向: (1-w)*approach + w*input
+      const expectedX = (1 - w) * approachDir.x + w * inputDir.x;
+      const expectedY = (1 - w) * approachDir.y + w * inputDir.y;
+      const expectedLen = Math.sqrt(expectedX * expectedX + expectedY * expectedY);
+      const expectedNorm = { x: expectedX / expectedLen, y: expectedY / expectedLen };
+
+      // 应该接近预期方向（考虑锥角限制）
+      expect(Math.abs(normalizedVel.x - expectedNorm.x)).toBeLessThan(0.2);
+      expect(Math.abs(normalizedVel.y - expectedNorm.y)).toBeLessThan(0.2);
+    });
+
+    it('没有输入时应该使用进入方向', () => {
+      const approachDir: Vec2 = { x: 1, y: 0 }; // 向右
+      const inputDir: Vec2 | null = null;
+
+      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, false);
+
+      // 归一化速度方向
+      const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+      const normalizedVel = { x: velocity.x / speed, y: velocity.y / speed };
+
+      // 应该保持进入方向
+      expect(normalizedVel.x).toBeCloseTo(approachDir.x, 1);
+      expect(normalizedVel.y).toBeCloseTo(approachDir.y, 1);
+    });
+  });
+
+  describe('Phase 2: 保留 vs 消耗', () => {
+    it('保留锚点时速度应该为基础速度', () => {
+      const approachDir: Vec2 = { x: 0, y: -1 }; // 向上
+      const inputDir: Vec2 = { x: 0, y: -1 }; // 向上
+
+      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, false);
+      const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+
+      expect(speed).toBeCloseTo(defaultTuning.madman.launchSpeedBase, 1);
+    });
+
+    it('消耗锚点时速度应该为基础速度 × 1.35', () => {
+      const approachDir: Vec2 = { x: 0, y: -1 }; // 向上
+      const inputDir: Vec2 = { x: 0, y: -1 }; // 向上
+
+      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, true);
+      const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+
+      const expectedSpeed = defaultTuning.madman.launchSpeedBase * defaultTuning.madman.consumeMultiplier;
+      expect(speed).toBeCloseTo(expectedSpeed, 1);
+    });
+  });
+
+  describe('Phase 2: 轨迹计算', () => {
+    it('应该生成正确数量的轨迹点', () => {
+      const startPos: Vec2 = { x: 0, y: 0 };
+      const velocity: Vec2 = { x: 10, y: -20 };
+      const gravity = 15.625; // 500 / 32
+      const dotCount = 20;
+      const timeStep = 0.05;
+
+      const trajectory = system.calculateTrajectory(startPos, velocity, gravity, dotCount, timeStep);
+
+      expect(trajectory).toHaveLength(dotCount);
+    });
+
+    it('轨迹第一个点应该是起始位置', () => {
+      const startPos: Vec2 = { x: 5, y: 10 };
+      const velocity: Vec2 = { x: 10, y: -20 };
+      const gravity = 15.625;
+
+      const trajectory = system.calculateTrajectory(startPos, velocity, gravity, 10, 0.05);
+
+      expect(trajectory[0].x).toBeCloseTo(startPos.x, 1);
+      expect(trajectory[0].y).toBeCloseTo(startPos.y, 1);
+    });
+
+    it('轨迹应该遵循抛物线方程', () => {
+      const startPos: Vec2 = { x: 0, y: 0 };
+      const velocity: Vec2 = { x: 10, y: -20 };
+      const gravity = 15.625;
+      const timeStep = 0.1;
+
+      const trajectory = system.calculateTrajectory(startPos, velocity, gravity, 5, timeStep);
+
+      // 检查第2个点（t=0.1）
+      const t = timeStep;
+      const expectedX = startPos.x + velocity.x * t;
+      const expectedY = startPos.y + velocity.y * t + 0.5 * gravity * t * t;
+
+      expect(trajectory[1].x).toBeCloseTo(expectedX, 1);
+      expect(trajectory[1].y).toBeCloseTo(expectedY, 1);
     });
   });
 });

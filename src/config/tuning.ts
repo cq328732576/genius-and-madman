@@ -51,6 +51,10 @@ export interface TuningConfig {
     directionMixWeight: number;    // 方向混合权重 w：0.60（输入）
     directionConeAngle: number;    // 方向锥角：±70°
     interruptIFrames: number;      // 被打断短无敌：0.15 秒
+    launchAimWeight: number;       // 弹射瞄准权重 w：0.60
+    coneHalfAngleDeg: number;      // 锥角半角：70°
+    trajectoryDotCount: number;    // 轨迹预览点数：20
+    trajectoryTimeStep: number;    // 轨迹时间步长：0.05 秒
   };
 
   // 重力翻转（本阶段不实现）
@@ -103,6 +107,10 @@ export const defaultTuning: TuningConfig = {
     directionMixWeight: 0.60,
     directionConeAngle: 70,
     interruptIFrames: 0.15,
+    launchAimWeight: 0.60,
+    coneHalfAngleDeg: 70,
+    trajectoryDotCount: 20,
+    trajectoryTimeStep: 0.05,
   },
   gravityFlip: {
     duration: 1.50,

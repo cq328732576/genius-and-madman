@@ -235,6 +235,29 @@ export class AnchorSystem {
   }
 
   /**
+   * 计算弹射轨迹预览点
+   * 使用抛物线运动方程：x(t) = x0 + vx*t, y(t) = y0 + vy*t + 0.5*g*t^2
+   */
+  calculateTrajectory(
+    startPos: Vec2,
+    velocity: Vec2,
+    gravity: number,
+    dotCount: number,
+    timeStep: number
+  ): Vec2[] {
+    const points: Vec2[] = [];
+    
+    for (let i = 0; i < dotCount; i++) {
+      const t = i * timeStep;
+      const x = startPos.x + velocity.x * t;
+      const y = startPos.y + velocity.y * t + 0.5 * gravity * t * t;
+      points.push({ x, y });
+    }
+    
+    return points;
+  }
+
+  /**
    * 获取所有锚点
    */
   getAnchors(): Anchor[] {
@@ -321,9 +344,14 @@ export class AnchorSystem {
       x: fromPos.x - anchorPos.x,
       y: fromPos.y - anchorPos.y,
     });
+    
+    // Phase 2: 添加垂直偏移，使角色身体完全在表面之上
+    // 角色高度1.8单位，底部对齐，所以需要向上偏移0.9单位（角色中心）
+    const verticalOffset = this.config.world.characterHeight / 2;
+    
     return {
       x: anchorPos.x + dir.x * hoverDist,
-      y: anchorPos.y + dir.y * hoverDist,
+      y: anchorPos.y + dir.y * hoverDist - verticalOffset,
     };
   }
 

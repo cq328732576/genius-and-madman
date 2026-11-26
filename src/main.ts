@@ -54,6 +54,11 @@ declare global {
       unfreeze: () => void;
       getState: () => any;
       getAnchors: () => any[];
+      // Phase 2: 新增测试钩子
+      setAimDirection: (x: number, y: number) => void;
+      setConsume: (consume: boolean) => void;
+      pressArrow: (direction: 'up' | 'down' | 'left' | 'right') => void;
+      getTrajectoryPoints: () => any[];
     };
   }
 }
@@ -179,6 +184,22 @@ window.__TEST_API__ = {
       hudText = scene.debugPanel.text;
     }
     
+    // Phase 2: 计算瞄准角度和弹射速度
+    let aimAngleDeg = 0;
+    let clampedAngleDeg = 0;
+    let launchSpeed = 0;
+    if (scene.isSnapped && scene.aimDirection) {
+      aimAngleDeg = Math.atan2(scene.aimDirection.y, scene.aimDirection.x) * 180 / Math.PI;
+      
+      const launchVelocity = scene.anchorSystem.calculateLaunchVelocity(
+        scene.incomingDashDir,
+        scene.aimDirection,
+        scene.consumeAnchor
+      );
+      clampedAngleDeg = Math.atan2(launchVelocity.y, launchVelocity.x) * 180 / Math.PI;
+      launchSpeed = Math.sqrt(launchVelocity.x * launchVelocity.x + launchVelocity.y * launchVelocity.y);
+    }
+    
     return {
       isSnapped: scene.isSnapped,
       snappedAnchorId: scene.snappedAnchorId,
@@ -193,12 +214,57 @@ window.__TEST_API__ = {
       badgeTexture: scene.snapBadge?.texture.key || null,
       inUseBadgeVisible: scene.snapBadge?.visible && scene.snapBadge?.texture.key === 'snap_badge_inuse_zh_g',
       hudText,
+      // Phase 2: 新增状态
+      aimAngleDeg,
+      clampedAngleDeg,
+      launchSpeed,
+      consumeAnchor: scene.consumeAnchor,
+      trajectoryPointsLength: scene.trajectoryDots.length,
     };
   },
   getAnchors: () => {
     const scene = game.scene.scenes[0] as any;
     if (!scene || !scene.anchorSystem) return [];
     return scene.anchorSystem.getAnchors();
+  },
+  // Phase 2: 新增测试钩子
+  setAimDirection: (x: number, y: number) => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    const len = Math.sqrt(x * x + y * y);
+    if (len > 0) {
+      scene.aimDirection = { x: x / len, y: y / len };
+    }
+  },
+  setConsume: (consume: boolean) => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    scene.consumeAnchor = consume;
+    scene.cKeyDown = consume;
+  },
+  pressArrow: (direction: 'up' | 'down' | 'left' | 'right') => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    
+    // 设置方向键状态
+    scene.cursors.up.isDown = direction === 'up';
+    scene.cursors.down.isDown = direction === 'down';
+    scene.cursors.left.isDown = direction === 'left';
+    scene.cursors.right.isDown = direction === 'right';
+    
+    // 步进一帧让场景更新
+    scene.update(0, 16.67);
+    
+    // 清除方向键状态
+    scene.cursors.up.isDown = false;
+    scene.cursors.down.isDown = false;
+    scene.cursors.left.isDown = false;
+    scene.cursors.right.isDown = false;
+  },
+  getTrajectoryPoints: () => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return [];
+    return scene.trajectoryDots.length;
   },
 };
 
