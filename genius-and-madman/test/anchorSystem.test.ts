@@ -8,7 +8,6 @@ import {
   AnchorSystem,
   Vec2,
   Surface,
-  AnchorState,
   DashPath,
 } from '../src/engine/anchorSystem';
 import { defaultTuning } from '../src/config/tuning';
@@ -409,7 +408,7 @@ describe('AnchorSystem', () => {
 
     it('解锁锚点后应该可以被替换', () => {
       const anchor1 = system.placeAnchor({ x: 5, y: 10 }, 'ground');
-      const anchor2 = system.placeAnchor({ x: 10, y: 10 }, 'ground');
+      system.placeAnchor({ x: 10, y: 10 }, 'ground');
 
       // 锁定 anchor1
       system.lockAnchor(anchor1!.id);

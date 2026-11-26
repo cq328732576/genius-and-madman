@@ -18,13 +18,11 @@ export class GameScene extends Phaser.Scene {
   // 输入
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: any;
-  private mousePointer!: Phaser.Input.Pointer;
   private shiftKey!: Phaser.Input.Keyboard.Key;
 
   // 状态
   private isAiming = false;
   private currentAimPos: Vec2 | null = null;
-  private isDashing = false;
   private isSnapped = false;
   private snappedAnchorId: string | null = null;
   private aimWindowTimer = 0;
@@ -34,8 +32,7 @@ export class GameScene extends Phaser.Scene {
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
   private aimRay: Phaser.GameObjects.Graphics | null = null;
-  private aimReticle: Phaser.GameObjects.Image | null = null;
-  private trajectoryLine: Phaser.GameObjects.Graphics | null = null;
+  private aimReticle: Phaser.GameObjects.Arc | null = null;
   private snapBadge: Phaser.GameObjects.Text | null = null;
 
   // 调试面板
@@ -59,7 +56,6 @@ export class GameScene extends Phaser.Scene {
 
     // 创建图形对象
     this.aimRay = this.add.graphics();
-    this.trajectoryLine = this.add.graphics();
 
     // 调试面板
     if (tuning.debug.enabled) {
@@ -72,7 +68,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTestLevel() {
-    const ppu = tuning.world.pixelsPerUnit;
 
     // 创建地面
     const ground = this.add.rectangle(640, 800, 1280, 64, 0x4a4a4a);
@@ -151,14 +146,14 @@ export class GameScene extends Phaser.Scene {
     this.genius.setDisplaySize(charHeight * 0.5, charHeight);
     this.genius.setTint(0x2fd5ff);
     this.physics.world.enable(this.genius);
-    this.genius.body!.setCollideWorldBounds(true);
+    (this.genius.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
 
     // 疯子（橙色）
     this.madman = this.physics.add.sprite(300, 750, '');
     this.madman.setDisplaySize(charHeight * 0.5, charHeight);
     this.madman.setTint(0xff8a1f);
     this.physics.world.enable(this.madman);
-    this.madman.body!.setCollideWorldBounds(true);
+    (this.madman.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
 
     // 添加标签
     this.add.text(0, 0, '天才', {
@@ -189,8 +184,6 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.SHIFT
     );
 
-    this.mousePointer = this.input.activePointer;
-
     // 鼠标点击放置锚点
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) {
@@ -198,7 +191,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+    this.input.on('pointerup', (_pointer: Phaser.Input.Pointer) => {
       if (this.isAiming && this.currentAimPos) {
         this.tryPlaceAnchor();
       }
@@ -218,7 +211,7 @@ export class GameScene extends Phaser.Scene {
     this.debugPanel.setDepth(1000);
   }
 
-  update(time: number, delta: number) {
+  update(_time: number, delta: number) {
     const dt = delta / 1000;
 
     // 更新冷却
@@ -247,7 +240,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateAiming() {
-    const ppu = tuning.world.pixelsPerUnit;
     const geniusPos = this.pixelsToUnits(this.genius.x, this.genius.y);
     const worldPoint = this.input.activePointer.positionToCamera(
       this.cameras.main
@@ -276,10 +268,12 @@ export class GameScene extends Phaser.Scene {
 
     // 渲染准星
     if (!this.aimReticle) {
-      this.aimReticle = this.add.circle(0, 0, 16);
+      this.aimReticle = this.add.circle(0, 0, 16, undefined, 0);
+      this.aimReticle.setStrokeStyle(2, color, alpha);
+    } else {
+      this.aimReticle.setStrokeStyle(2, color, alpha);
     }
     this.aimReticle.setPosition(worldPoint.x, worldPoint.y);
-    this.aimReticle.setStrokeStyle(2, color, alpha);
     this.aimReticle.setVisible(true);
 
     // 显示失败原因
@@ -333,7 +327,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createAnchorSprite(anchor: Anchor) {
-    const ppu = tuning.world.pixelsPerUnit;
     const pos = this.unitsToPixels(anchor.position.x, anchor.position.y);
 
     const container = this.add.container(pos.x, pos.y);
@@ -344,7 +337,7 @@ export class GameScene extends Phaser.Scene {
     container.add(halo);
 
     // 吸附半径环
-    const snapRing = this.add.circle(0, 0, tuning.madman.snapRadius * ppu);
+    const snapRing = this.add.circle(0, 0, tuning.madman.snapRadius * tuning.world.pixelsPerUnit);
     snapRing.setStrokeStyle(2, 0xff8a1f, 0.3);
     snapRing.setVisible(false);
     container.add(snapRing);
@@ -456,7 +449,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tryDash() {
-    const ppu = tuning.world.pixelsPerUnit;
     const madmanPos = this.pixelsToUnits(this.madman.x, this.madman.y);
 
     // 确定冲刺方向
@@ -500,8 +492,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private performShortDash(direction: Vec2) {
-    const ppu = tuning.world.pixelsPerUnit;
-    const distance = tuning.madman.shortDashDistance * ppu;
+    const distance = tuning.madman.shortDashDistance * tuning.world.pixelsPerUnit;
     this.madman.setVelocity(direction.x * distance * 10, direction.y * distance * 10);
 
     // 短时间后停止
@@ -516,7 +507,6 @@ export class GameScene extends Phaser.Scene {
     const anchor = this.anchorSystem.getAnchor(this.snappedAnchorId);
     if (!anchor) return;
 
-    const ppu = tuning.world.pixelsPerUnit;
     const madmanPos = this.pixelsToUnits(this.madman.x, this.madman.y);
 
     // 计算接近方向
@@ -548,7 +538,10 @@ export class GameScene extends Phaser.Scene {
     );
 
     // 应用速度
-    this.madman.setVelocity(velocity.x * ppu, velocity.y * ppu);
+    this.madman.setVelocity(
+      velocity.x * tuning.world.pixelsPerUnit,
+      velocity.y * tuning.world.pixelsPerUnit
+    );
 
     // 解锁或移除锚点
     if (this.consumeAnchor) {
