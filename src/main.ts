@@ -60,6 +60,8 @@ declare global {
       setIncomingDashDir: (x: number, y: number) => void;
       pressArrow: (direction: 'up' | 'down' | 'left' | 'right') => void;
       getTrajectoryPoints: () => any[];
+      // Phase 3: 关卡控制
+      loadLevel: (levelId: string) => void;
     };
   }
 }
@@ -308,6 +310,13 @@ window.__TEST_API__ = {
     const scene = game.scene.scenes[0] as any;
     if (!scene) return [];
     return scene.trajectoryDots.length;
+  },
+  // Phase 3: 关卡控制
+  loadLevel: (levelId: string) => {
+    // 重新加载场景并传入关卡 ID
+    const url = new URL(window.location.href);
+    url.searchParams.set('level', levelId);
+    window.location.href = url.toString();
   },
 };
 

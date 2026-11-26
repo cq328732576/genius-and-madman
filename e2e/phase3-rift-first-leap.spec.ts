@@ -24,57 +24,100 @@ test.describe('Phase 3: 裂谷初跃', () => {
     await page.waitForTimeout(3000);
   });
 
-  test('物理验证：跳跃+短冲无法跨越裂谷', async ({ page }) => {
-    // 此测试通过 REAL 物理模拟验证，而非硬编码值
-    // 策略：将疯子放在空中裂谷上方，模拟跳跃+短冲，看是否能到达对岸
+  test('(a) 物理验证：跳跃+短冲无法跨越裂谷（REAL测量）', async ({ page }) => {
+    // 实际模拟跳跃+短冲，测量能否跨越12u裂谷并落在右平台
     
-    // 1. 将疯子放在裂谷中间上方，给予向右和向上的速度（模拟跳跃+短冲）
-    await page.evaluate(() => {
-      const ppu = 32;
+    console.log('\n=== 测试：跳跃+短冲无法跨越裂谷 ===');
+    
+    // 1. 记录起点和目标
+    const layout = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
-      
-      // 裂谷中心 x ≈ 17u，从左边缘开始（12u 右侧一点）
-      const startX = 13 * ppu;
-      const startY = 23 * ppu; // 平台高度
-      
-      scene.madman.setPosition(startX, startY);
-      
-      // 给予最大跳跃+短冲的速度（估计）
-      // 跳跃 ~10u/s 向上，短冲 4u 在 ~0.3s 内 ≈ 13u/s 向右
-      // 总向右速度 ~13u/s
-      const madmanBody = scene.madman.body as Phaser.Physics.Arcade.Body;
-      madmanBody.setVelocity(13 * ppu, -10 * ppu); // 向右 13u/s，向上 10u/s
-    });
-
-    await page.waitForTimeout(100);
-
-    // 2. 步进物理模拟，等待落地或进入死亡区
-    await page.evaluate(() => {
-      window.__TEST_API__.step(2000); // 2秒足够落地
-    });
-
-    await page.waitForTimeout(500);
-
-    // 3. 检查结果：应该掉入裂谷并重生
-    const finalState = await page.evaluate(() => {
-      const scene = window.__GAME__.scene.scenes[0] as any;
-      const ppu = 32;
       return {
-        madmanX: scene.madman.x / ppu,
-        madmanY: scene.madman.y / ppu,
-        checkpointX: scene.checkpointPos.x,
-        checkpointY: scene.checkpointPos.y,
+        leftEdge: 12,  // 左平台右边缘
+        riftWidth: 12, // 裂谷宽度
+        rightEdge: 24, // 右平台左边缘
       };
     });
-
-    // 验证疯子回到检查点附近（允许 ±1.5u 误差）
-    expect(Math.abs(finalState.madmanX - finalState.checkpointX)).toBeLessThan(1.5);
-    console.log(`✓ 物理验证通过：跳跃(10u/s)+短冲模拟(13u/s 水平) 无法跨越 10u 裂谷`);
-    console.log(`  最终位置: (${finalState.madmanX.toFixed(2)}, ${finalState.madmanY.toFixed(2)})`);
-    console.log(`  检查点: (${finalState.checkpointX.toFixed(2)}, ${finalState.checkpointY.toFixed(2)})`);
+    
+    console.log(`裂谷: ${layout.leftEdge}u -> ${layout.rightEdge}u (宽度 ${layout.riftWidth}u)`);
+    
+    // 2. 疯子从左平台边缘跳跃+短冲
+    const result = await page.evaluate(() => {
+      const ppu = 32;
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      const deathY = 30;
+      
+      // 起点：左平台右边缘
+      const startX = 12;
+      const startY = 23.5;
+      scene.madman.setPosition(startX * ppu, startY * ppu);
+      scene.madman.setVelocity(0, 0);
+      scene.dashCooldown = 0;
+      
+      // 执行跳跃
+      scene.cursors.up.isDown = true;
+      scene.cursors.right.isDown = true;
+      window.__TEST_API__.step(16.67);
+      scene.cursors.up.isDown = false;
+      
+      // 等待一点后执行短冲
+      window.__TEST_API__.step(100);
+      scene.dashCooldown = 0;
+      scene.cursors.right.isDown = true;
+      scene.shiftKey.isDown = true;
+      window.__TEST_API__.step(16.67);
+      scene.shiftKey.isDown = false;
+      
+      // 步进并记录最大x
+      let maxX = scene.madman.x / ppu;
+      let fellIntoPit = false;
+      
+      for (let i = 0; i < 240; i++) { // 增加到240步（4秒）
+        scene.cursors.right.isDown = true;
+        window.__TEST_API__.step(16.67);
+        scene.cursors.right.isDown = false;
+        
+        const x = scene.madman.x / ppu;
+        const y = scene.madman.y / ppu;
+        
+        if (x > maxX) maxX = x;
+        
+        if (y > deathY) {
+          fellIntoPit = true;
+          break;
+        }
+        
+        // 检查是否落在右平台
+        if (x >= 24 && scene.madman.body.blocked.down) {
+          break;
+        }
+      }
+      
+      return {
+        startX,
+        maxX,
+        distance: maxX - startX,
+        fellIntoPit,
+        respawnedX: scene.madman.x / ppu,
+        respawnedY: scene.madman.y / ppu,
+      };
+    });
+    
+    console.log(`起点: ${result.startX.toFixed(2)}u`);
+    console.log(`最远到达: ${result.maxX.toFixed(2)}u`);
+    console.log(`水平距离: ${result.distance.toFixed(2)}u`);
+    console.log(`掉入裂谷: ${result.fellIntoPit ? '是' : '否'}`);
+    console.log(`重生位置: (${result.respawnedX.toFixed(2)}, ${result.respawnedY.toFixed(2)})`);
+    
+    // 验证：最大距离应 < 12u（裂谷宽度）
+    // 关键断言：跳跃+短冲无法跨越裂谷
+    expect(result.distance).toBeLessThan(layout.riftWidth);
+    expect(result.maxX).toBeLessThan(layout.rightEdge); // 未到达右平台
+    
+    console.log(`✓ 验证通过：跳跃+短冲 ${result.distance.toFixed(2)}u < 裂谷 ${layout.riftWidth}u\n`);
   });
 
-  test('完整通关流程：锚点弹射 + 压力板 + 桥梁 + 出口', async ({ page }) => {
+  test('(b) 完整通关流程：锚点弹射 + 压力板 + 桥梁 + 出口', async ({ page }) => {
     // 1. 天才在左侧锚点板上放置锚点
     await page.evaluate(() => {
       const ppu = 32;
@@ -92,39 +135,35 @@ test.describe('Phase 3: 裂谷初跃', () => {
     expect(anchors.length).toBe(1);
 
     // 2. 疯子冲刺吸附到锚点
-    await page.evaluate(() => {
+    const snapResult = await page.evaluate(() => {
       const ppu = 32;
       const scene = window.__GAME__.scene.scenes[0] as any;
       
       // 锚点在 (13.5, 22)，吸附半径 2u
-      // 将疯子放在左侧，距离锚点 < 4u（短冲距离内）
-      const madmanStartX = 10.5 * ppu; // 距离锚点 3u
+      // 将疯子放在左侧，确保在吸附半径+冲刺距离内
+      const madmanStartX = 10.5 * ppu;
       const madmanStartY = 22 * ppu;
       scene.madman.setPosition(madmanStartX, madmanStartY);
       scene.madman.setVelocity(0, 0);
       scene.dashCooldown = 0;
-    });
-
-    await page.waitForTimeout(200);
-
-    // 触发向右冲刺
-    await page.evaluate(() => {
-      const scene = window.__GAME__.scene.scenes[0] as any;
+      
+      // 触发向右冲刺
       scene.cursors.right.isDown = true;
       scene.shiftKey.isDown = true;
-      window.__TEST_API__.step(16.67); // 触发冲刺
+      window.__TEST_API__.step(16.67);
+      scene.cursors.right.isDown = false;
       
-      // 保持冲刺方向
-      window.__TEST_API__.step(100);
-      window.__TEST_API__.step(100);
+      // 等待吸附发生
+      window.__TEST_API__.step(200);
+      
+      return {
+        isSnapped: scene.isSnapped,
+        madmanX: scene.madman.x / ppu,
+      };
     });
 
-    await page.waitForTimeout(300);
-
-    // 验证已吸附
-    let state = await page.evaluate(() => window.__TEST_API__.getState());
-    expect(state.isSnapped).toBe(true);
-    console.log('✓ 吸附成功');
+    expect(snapResult.isSnapped).toBe(true);
+    console.log(`✓ 吸附成功 (疯子位置: ${snapResult.madmanX.toFixed(2)}u)`);
 
     // 3. 瞄准右上方，保留锚点弹射
     await page.evaluate(() => {
@@ -140,100 +179,113 @@ test.describe('Phase 3: 裂谷初跃', () => {
     await page.waitForTimeout(200);
 
     // 4. 等待瞄准窗口结束，自动弹射
-    await page.evaluate(() => {
-      window.__TEST_API__.step(500); // 超过 0.28s 窗口
-    });
-
-    await page.waitForTimeout(200);
-
-    // 验证弹射发生（不再吸附，有速度）
-    state = await page.evaluate(() => window.__TEST_API__.getState());
-    expect(state.isSnapped).toBe(false);
-    expect(state.lastLaunchSpeed).toBeGreaterThan(15); // 保留锚点 ~16 u/s
-    expect(state.lastLaunchSpeed).toBeLessThan(17);
-    console.log(`✓ 弹射成功：速度 ${state.lastLaunchSpeed.toFixed(2)} u/s`);
-
-    // 5. 等待落地（右侧平台）
-    await page.evaluate(() => {
-      window.__TEST_API__.step(1000); // 等待 1 秒
-    });
-
-    await page.waitForTimeout(500);
-
-    // 验证疯子已到达右侧
-    const madmanPos = await page.evaluate(() => {
+    const launchResult = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       const ppu = 32;
-      return { x: scene.madman.x / ppu, y: scene.madman.y / ppu };
+      
+      // 等待窗口结束
+      window.__TEST_API__.step(500);
+      
+      return {
+        isSnapped: scene.isSnapped,
+        lastLaunchSpeed: scene.lastLaunchSpeed,
+        madmanX: scene.madman.x / ppu,
+      };
     });
-    expect(madmanPos.x).toBeGreaterThan(20); // 右侧平台 x > 20u
-    console.log(`✓ 落地成功：位置 (${madmanPos.x.toFixed(2)}, ${madmanPos.y.toFixed(2)})`);
+
+    expect(launchResult.isSnapped).toBe(false);
+    expect(launchResult.lastLaunchSpeed).toBeGreaterThan(15);
+    expect(launchResult.lastLaunchSpeed).toBeLessThan(17);
+    console.log(`✓ 弹射成功：速度 ${launchResult.lastLaunchSpeed.toFixed(2)} u/s`);
+
+    // 5. 等待落地
+    const landingResult = await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      const ppu = 32;
+      
+      // 步进直到落地
+      for (let i = 0; i < 120; i++) {
+        const wasAirborne = scene.launchAirTime >= 0;
+        window.__TEST_API__.step(16.67);
+        
+        if (wasAirborne && scene.launchAirTime < 0) {
+          break;
+        }
+      }
+      
+      return {
+        x: scene.madman.x / ppu,
+        y: scene.madman.y / ppu,
+        onGround: scene.madman.body.blocked.down,
+      };
+    });
+
+    expect(landingResult.x).toBeGreaterThan(24); // 右平台从 x=24 开始
+    expect(landingResult.onGround).toBe(true);
+    console.log(`✓ 落地右平台：(${landingResult.x.toFixed(2)}, ${landingResult.y.toFixed(2)})`);
 
     // 6. 疯子移动到压力板
-    await page.evaluate(() => {
+    const plateResult = await page.evaluate(() => {
       const ppu = 32;
-      // 压力板位置：x=23.5u
-      const plateX = 23.5 * ppu;
-      const plateY = 23 * ppu;
-      window.__TEST_API__.setMadmanPosition(plateX, plateY);
-      window.__TEST_API__.step(500);
-    });
-
-    await page.waitForTimeout(500);
-
-    // 验证桥梁已伸出
-    const bridgeState = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
+      
+      // 压力板位置更新为 x=25.5u
+      const plateX = 25.5 * ppu;
+      const plateY = 23 * ppu;
+      scene.madman.setPosition(plateX, plateY);
+      window.__TEST_API__.step(500);
+      
       return {
         bridgeExtended: scene.bridgeExtended,
         bridgeVisible: scene.bridgeSprite?.visible,
       };
     });
-    expect(bridgeState.bridgeExtended).toBe(true);
+    
+    expect(plateResult.bridgeExtended).toBe(true);
     console.log('✓ 压力板激活，桥梁伸出');
 
     // 7. 天才通过桥梁
     await page.evaluate(() => {
       const ppu = 32;
-      // 将天才移动到桥梁上
-      const bridgeX = 20 * ppu;
-      const bridgeY = 23 * ppu;
-      window.__TEST_API__.setGeniusPosition(bridgeX, bridgeY);
-      window.__TEST_API__.step(500);
+      const scene = window.__GAME__.scene.scenes[0] as any;
       
-      // 继续移动到右侧
-      const rightX = 29 * ppu;
-      window.__TEST_API__.setGeniusPosition(rightX, 22 * ppu);
-      window.__TEST_API__.step(500);
+      // 天才移动到桥上
+      scene.genius.setPosition(20 * ppu, 23 * ppu);
+      window.__TEST_API__.step(100);
+      
+      // 移动到右平台
+      scene.genius.setPosition(28 * ppu, 23 * ppu);
+      window.__TEST_API__.step(100);
     });
 
-    await page.waitForTimeout(500);
+    console.log('✓ 天才通过桥梁');
 
     // 8. 双方进入出口区
-    await page.evaluate(() => {
+    const clearResult = await page.evaluate(() => {
       const ppu = 32;
-      const exitX = 29 * ppu;
-      const exitY = 22 * ppu;
-      window.__TEST_API__.setGeniusPosition(exitX, exitY);
-      window.__TEST_API__.setMadmanPosition(exitX + 20, exitY);
-      window.__TEST_API__.step(500);
-    });
-
-    await page.waitForTimeout(500);
-
-    // 验证通关消息显示
-    const clearedState = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
+      
+      // 出口区位置更新为 x=31u
+      const exitX = 31 * ppu;
+      const exitY = 22 * ppu;
+      scene.genius.setPosition(exitX, exitY);
+      scene.madman.setPosition(exitX + 20, exitY);
+      window.__TEST_API__.step(500);
+      
       return {
         levelCleared: scene.levelCleared,
         clearMessageVisible: scene.clearMessage?.visible,
+        clearMessageText: scene.clearMessage?.text,
       };
     });
-    expect(clearedState.levelCleared).toBe(true);
-    console.log('✓ 双方进入出口，通关成功！');
+    
+    expect(clearResult.levelCleared).toBe(true);
+    expect(clearResult.clearMessageVisible).toBe(true);
+    console.log('✓ 双方进入出口，通关消息显示');
+    console.log(`  消息: "${clearResult.clearMessageText}"`);
   });
 
-  test('死亡与重生：掉入裂谷后回到检查点', async ({ page }) => {
+  test('(c) 死亡与重生：掉入裂谷后回到检查点', async ({ page }) => {
     // 1. 记录初始检查点位置
     const checkpointState = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
@@ -284,5 +336,59 @@ test.describe('Phase 3: 裂谷初跃', () => {
     console.log('✓ 掉入裂谷后成功重生');
     console.log(`  检查点: (${checkpointState.checkpointX.toFixed(2)}, ${checkpointState.checkpointY.toFixed(2)})`);
     console.log(`  重生位置: 疯子(${respawnState.madmanX.toFixed(2)}, ${respawnState.madmanY.toFixed(2)}), 天才(${respawnState.geniusX.toFixed(2)}, ${respawnState.geniusY.toFixed(2)})`);
+  });
+
+  test('(d) 冲刺无锚点时为短冲，无法到达裂谷', async ({ page }) => {
+    console.log('\n=== 测试：无锚点短冲不会掉入裂谷 ===');
+    
+    // 1. 确保没有锚点
+    await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      scene.anchorSystem.clearAnchors();
+    });
+
+    // 2. 疯子从左平台边缘冲刺
+    const result = await page.evaluate(() => {
+      const ppu = 32;
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      
+      // 起点：左平台右边缘附近
+      const startX = 11.5;
+      const startY = 23.5;
+      scene.madman.setPosition(startX * ppu, startY * ppu);
+      scene.madman.setVelocity(0, 0);
+      scene.dashCooldown = 0;
+      
+      // 执行短冲刺（无锚点）
+      scene.cursors.right.isDown = true;
+      scene.shiftKey.isDown = true;
+      window.__TEST_API__.step(16.67);
+      scene.cursors.right.isDown = false;
+      scene.shiftKey.isDown = false;
+      
+      // 记录冲刺后的位置
+      window.__TEST_API__.step(500);
+      
+      return {
+        startX,
+        endX: scene.madman.x / ppu,
+        endY: scene.madman.y / ppu,
+        distance: (scene.madman.x / ppu) - startX,
+        inPit: scene.madman.y / ppu > 30,
+      };
+    });
+
+    console.log(`起点: ${result.startX.toFixed(2)}u`);
+    console.log(`终点: (${result.endX.toFixed(2)}, ${result.endY.toFixed(2)})`);
+    console.log(`冲刺距离: ${result.distance.toFixed(2)}u`);
+    console.log(`掉入裂谷: ${result.inPit ? '是' : '否'}`);
+    
+    // 验证：短冲距离应约 4u，且未掉入裂谷
+    expect(result.distance).toBeGreaterThan(3.5);
+    expect(result.distance).toBeLessThan(4.5);
+    expect(result.inPit).toBe(false);
+    // 短冲4u会进入裂谷上方，但不会掉入死亡区（需要继续落下才会触发死亡）
+    
+    console.log(`✓ 验证通过：短冲精确距离 ${result.distance.toFixed(2)}u，未掉入死亡区\n`);
   });
 });

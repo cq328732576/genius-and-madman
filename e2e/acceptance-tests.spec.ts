@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Phase 1 验收测试', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/', { waitUntil: 'networkidle' });
+    await page.goto('/?level=testLevel', { waitUntil: 'networkidle' });
     await page.waitForSelector('canvas', { timeout: 15000 });
     await page.waitForFunction(() => {
       return window.__GAME__ && window.__TEST_API__ && 

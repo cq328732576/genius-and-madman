@@ -112,12 +112,12 @@ export const riftFirstLeap: LevelConfig = {
       height: 1, // 32 px
     },
     
-    // 裂谷宽度 10u（基于物理计算）
-    riftWidth: 10,  // 320 px
+    // 裂谷宽度 12u（基于实测物理：保留发射15.29u，跳跃+短冲11.40u）
+    riftWidth: 12,  // 384 px
     
     // 右侧目标平台（8u 宽）
     rightPlatform: {
-      x: 26,     // 左平台右边缘(12) + 裂谷(10) + 右平台半宽(4) = 26
+      x: 28,     // 左平台右边缘(12) + 裂谷(12) + 右平台半宽(4) = 28
       y: 24,
       width: 8,
       height: 1,
@@ -135,7 +135,7 @@ export const riftFirstLeap: LevelConfig = {
     
     // 压力板：右侧平台左部
     pressurePlate: {
-      x: 23.5,   // 右平台左边缘 + 1.5u
+      x: 25.5,   // 右平台左边缘 + 1.5u (调整后位置)
       y: 23.5,   // 平台表面上方 0.5u
       width: 2,
       height: 0.5,
@@ -143,17 +143,17 @@ export const riftFirstLeap: LevelConfig = {
     
     // 桥梁：从右侧平台中部向左伸出
     bridge: {
-      retractedX: 26,  // 收回时在右平台内部
+      retractedX: 28,  // 收回时在右平台内部
       extendedX: 20,   // 伸出后跨越部分裂谷
       y: 24,
-      width: 6,
+      width: 8,        // 加长以覆盖更宽的裂谷
       height: 0.8,
       extendDuration: 0.5,  // 0.5 秒伸出动画
     },
     
     // 出口区：右侧平台右端
     exitZone: {
-      x: 29,
+      x: 31,     // 调整到新的右平台位置
       y: 22,
       width: 2,
       height: 4,
@@ -167,11 +167,11 @@ export const riftFirstLeap: LevelConfig = {
   },
   
   physics: {
-    keptLaunchRange: 10.53,      // 保留锚点射程
-    jumpPlusShortDashRange: 7.5, // 跳跃+短冲
-    riftWidth: 10.0,             // 裂谷宽度
-    marginKept: 0.53,            // 保留发射余量
-    marginJumpDash: 2.5,         // 跳跃+短冲差距
+    keptLaunchRange: 15.29,      // 保留锚点射程（实测）
+    jumpPlusShortDashRange: 11.40, // 跳跃+短冲（实测）
+    riftWidth: 12.0,             // 裂谷宽度
+    marginKept: 3.29,            // 保留发射余量 (15.29 - 12.0)
+    marginJumpDash: 0.60,        // 跳跃+短冲差距 (12.0 - 11.40)
   },
   
   mechanics: {
@@ -185,12 +185,48 @@ export const riftFirstLeap: LevelConfig = {
   },
 };
 
+// Phase 1/2 测试关卡配置（保留原有布局）
+export const testLevel: LevelConfig = {
+  id: 'test_level',
+  name: 'Test Level',
+  nameZh: '测试关卡',
+  
+  layout: {
+    leftPlatform: { x: 12.5, y: 18.75, width: 6, height: 1 },
+    riftWidth: 0, // 无裂谷
+    rightPlatform: { x: 25, y: 15.625, width: 6, height: 1 },
+    attachablePlate: { x: 0, y: 0, width: 0, height: 0, type: 'wall' },
+    pressurePlate: { x: 0, y: 0, width: 0, height: 0 },
+    bridge: { retractedX: 0, extendedX: 0, y: 0, width: 0, height: 0, extendDuration: 0 },
+    exitZone: { x: 0, y: 0, width: 0, height: 0 },
+    checkpoint: { x: 12.5, y: 18.25 },
+  },
+  
+  physics: {
+    keptLaunchRange: 0,
+    jumpPlusShortDashRange: 0,
+    riftWidth: 0,
+    marginKept: 0,
+    marginJumpDash: 0,
+  },
+  
+  mechanics: {
+    bridgeRule: 'stay_extended',
+    deathZoneY: 40,
+  },
+};
+
 // 导出所有关卡
 export const levels: Record<string, LevelConfig> = {
+  testLevel,
   riftFirstLeap,
 };
 
-// 获取当前关卡（Phase 3 只有一个关卡）
-export function getCurrentLevel(): LevelConfig {
+// 获取当前关卡（默认 Phase 3，可通过参数切换）
+export function getCurrentLevel(levelId?: string): LevelConfig {
+  if (levelId && levels[levelId]) {
+    return levels[levelId];
+  }
+  // 默认返回 Phase 3 关卡
   return riftFirstLeap;
 }

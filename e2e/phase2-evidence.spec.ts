@@ -15,7 +15,7 @@ if (!fs.existsSync(evidenceDir)) {
 
 test.describe('Phase 2 证据捕获（修订版）', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/', { waitUntil: 'networkidle' });
+    await page.goto('/?level=testLevel', { waitUntil: 'networkidle' });
     await page.waitForSelector('canvas', { timeout: 15000 });
     await page.waitForFunction(() => {
       return window.__GAME__ && window.__TEST_API__ && 

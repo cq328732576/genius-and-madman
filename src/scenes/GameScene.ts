@@ -125,11 +125,17 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.anchorSystem = new AnchorSystem(tuning);
 
-    // Phase 3: 加载关卡配置
-    this.level = getCurrentLevel();
+    // Phase 3: 加载关卡配置（支持通过 URL 参数切换）
+    const urlParams = new URLSearchParams(window.location.search);
+    const levelId = urlParams.get('level') || 'riftFirstLeap';
+    this.level = getCurrentLevel(levelId);
 
-    // 创建测试关卡
-    this.createTestLevel();
+    // 创建关卡
+    if (this.level.id === 'test_level') {
+      this.createPhase12TestLevel();
+    } else {
+      this.createPhase3Level();
+    }
 
     // 创建角色
     this.createCharacters();
@@ -156,7 +162,83 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.madman, true, 0.1, 0.1);
   }
 
-  private createTestLevel() {
+  private createPhase12TestLevel() {
+    // Phase 1/2: 创建原始测试关卡（保持向后兼容）
+    this.platforms = this.physics.add.staticGroup();
+    const ppu = tuning.world.pixelsPerUnit;
+
+    // 创建地面
+    const ground = this.add.rectangle(640, 800, 1280, 64, 0x4a4a4a);
+    this.platforms.add(ground);
+
+    this.surfaces.push({
+      id: 'ground',
+      isAttachable: true,
+      points: [
+        { x: 0, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 27 },
+        { x: 0, y: 27 },
+      ],
+    });
+
+    // 创建墙壁
+    const wall = this.add.rectangle(1200, 600, 64, 400, 0x6a6a6a);
+    this.platforms.add(wall);
+
+    this.surfaces.push({
+      id: 'wall',
+      isAttachable: true,
+      points: [
+        { x: 36, y: 6 },
+        { x: 38, y: 6 },
+        { x: 38, y: 18.5 },
+        { x: 36, y: 18.5 },
+      ],
+    });
+
+    // 创建平台（可附着）
+    const platform1 = this.add.rectangle(400, 600, 192, 32, 0x5a9a5a);
+    this.platforms.add(platform1);
+
+    this.surfaces.push({
+      id: 'platform1',
+      isAttachable: true,
+      points: [
+        { x: 9.5, y: 18 },
+        { x: 15.5, y: 18 },
+        { x: 15.5, y: 19 },
+        { x: 9.5, y: 19 },
+      ],
+    });
+
+    // 创建不可附着平台（红色）
+    const platform2 = this.add.rectangle(800, 500, 192, 32, 0x9a5a5a);
+    this.platforms.add(platform2);
+
+    // 添加标签
+    this.add.text(400, 630, '可附着', {
+      fontSize: '16px',
+      color: '#fff',
+    }).setOrigin(0.5);
+
+    this.add.text(800, 530, '不可附着', {
+      fontSize: '16px',
+      color: '#fff',
+    }).setOrigin(0.5);
+
+    // 裂谷（深色背景表示）
+    this.add.rectangle(600, 750, 400, 100, 0x2a2a2a);
+    this.add.text(600, 750, '裂谷', {
+      fontSize: '24px',
+      color: '#888',
+    }).setOrigin(0.5);
+    
+    // 检查点设置为平台中心
+    this.checkpointPos = { x: 12.5, y: 18.25 };
+  }
+
+  private createPhase3Level() {
     // Phase 3: 创建「裂谷初跃」关卡
     this.platforms = this.physics.add.staticGroup();
     const ppu = tuning.world.pixelsPerUnit;
