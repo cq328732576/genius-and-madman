@@ -17,9 +17,6 @@ export class GameScene extends Phaser.Scene {
   private genius!: Phaser.Physics.Arcade.Sprite;
   private madman!: Phaser.Physics.Arcade.Sprite;
   
-  // 调试标志
-  private hasLoggedDash = false;
-
   // 输入
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: any;
@@ -32,7 +29,8 @@ export class GameScene extends Phaser.Scene {
   private snappedAnchorId: string | null = null;
   private aimWindowTimer = 0;
   private dashCooldown = 0;
-  private consumeAnchor = false;
+  private _consumeAnchor = false; // Phase 2+: 锚点消耗机制（未使用）
+  public testHoldDash = false; // E2E测试钩子：模拟按住冲刺键
 
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -509,12 +507,11 @@ export class GameScene extends Phaser.Scene {
     if (this.isSnapped) {
       this.aimWindowTimer += dt;
 
-      // 瞄准窗口超时
-      const maxWindow = this.shiftKey.isDown
-        ? tuning.madman.aimWindowMax
-        : tuning.madman.aimWindowBase;
+      // 窗口逻辑：按住冲刺键延长，但释放不会提前结束
+      const held = this.shiftKey.isDown || (this as any).testHoldDash;
+      const limit = held ? tuning.madman.aimWindowMax : tuning.madman.aimWindowBase;
 
-      if (this.aimWindowTimer >= maxWindow || !this.shiftKey.isDown) {
+      if (this.aimWindowTimer >= limit) {
         this.launchFromAnchor();
       }
 
@@ -556,16 +553,19 @@ export class GameScene extends Phaser.Scene {
 
     const snapResult = this.anchorSystem.checkSnapAlongPath(dashPath);
 
-    // 调试日志（仅首次）
-    if (tuning.debug.enabled && !this.hasLoggedDash) {
-      console.log('[tryDash]', {
-        madmanPos,
-        direction,
-        dashDistance: tuning.madman.shortDashDistance,
-        snapResult,
-      });
-      this.hasLoggedDash = true;
-    }
+    // 调试日志
+    console.log('[tryDash] 检查吸附', {
+      madmanPos,
+      madmanPixels: { x: this.madman.x, y: this.madman.y },
+      direction,
+      dashDistance: tuning.madman.shortDashDistance,
+      anchors: this.anchorSystem.getAnchors().map(a => ({ 
+        id: a.id.substring(0,8),
+        pos: a.position,
+        state: a.state 
+      })),
+      snapResult,
+    });
 
     if (snapResult.snapped && snapResult.hoverPoint) {
       // 吸附成功

@@ -48,6 +48,7 @@ declare global {
       setGeniusPosition: (x: number, y: number) => void;
       step: (ms: number) => void;
       triggerDash: (direction: 'left' | 'right') => void;
+      setHoldDash: (hold: boolean) => void;
       getState: () => any;
       getAnchors: () => any[];
     };
@@ -127,6 +128,13 @@ window.__TEST_API__ = {
     // 清除方向键但保持 Shift（用于瞄准窗口）
     scene.cursors.left.isDown = false;
     scene.cursors.right.isDown = false;
+    scene.shiftKey.isDown = false;
+  },
+  // 设置是否按住冲刺键（用于测试延长窗口）
+  setHoldDash: (hold: boolean) => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    scene.testHoldDash = hold;
   },
   // 获取游戏状态
   getState: () => {
