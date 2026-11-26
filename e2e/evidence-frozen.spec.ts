@@ -2,6 +2,12 @@
  * 冻结证据捕获 - 确保HUD和徽标在截图中可见
  */
 import { test, expect } from '@playwright/test';
+
+// 证据路径：UPDATE_EVIDENCE=1时写入docs/evidence/，否则写入test-results/
+const evidencePath = (filename: string) => 
+  process.env.UPDATE_EVIDENCE === '1' 
+    ? `docs/evidence/${filename}` 
+    : `test-results/evidence-${filename}`;
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 
@@ -19,7 +25,7 @@ test.describe('冻结证据捕获', () => {
 
   test('04-locked-hint: A锁定B替换（冻结）', async ({ page }) => {
     // 记录旧MD5
-    const oldPath = 'docs/evidence/04-locked-hint.png';
+    const oldPath = evidencePath('04-locked-hint.png');
     let oldMd5 = '';
     if (fs.existsSync(oldPath)) {
       const oldData = fs.readFileSync(oldPath);
@@ -68,7 +74,7 @@ test.describe('冻结证据捕获', () => {
     expect(frozenState.hudText).toContain('是否吸附: 是');
     
     // 截图
-    await page.screenshot({ path: 'docs/evidence/04-locked-hint.png' });
+    await page.screenshot({ path: evidencePath('04-locked-hint.png') });
     
     // 验证MD5不同
     const newData = fs.readFileSync(oldPath);
@@ -80,7 +86,7 @@ test.describe('冻结证据捕获', () => {
   });
 
   test('04b-only-locked: 唯一锚点锁定（冻结）', async ({ page }) => {
-    const oldPath = 'docs/evidence/04b-only-locked.png';
+    const oldPath = evidencePath('04b-only-locked.png');
     let oldMd5 = '';
     if (fs.existsSync(oldPath)) {
       const oldData = fs.readFileSync(oldPath);
@@ -133,7 +139,7 @@ test.describe('冻结证据捕获', () => {
     expect(frozenState.inUseBadgeVisible).toBe(true);
     
     // 截图
-    await page.screenshot({ path: 'docs/evidence/04b-only-locked.png' });
+    await page.screenshot({ path: evidencePath('04b-only-locked.png') });
     
     // 验证MD5不同
     const newData = fs.readFileSync(oldPath);
@@ -162,7 +168,7 @@ test.describe('冻结证据捕获', () => {
     expect(frozenState.isSnapped).toBe(true);
     expect(frozenState.hudText).toContain('是否吸附: 是');
     
-    await page.screenshot({ path: 'docs/evidence/05-snap-success.png' });
+    await page.screenshot({ path: evidencePath('05-snap-success.png') });
     await page.evaluate(() => window.__TEST_API__.unfreeze());
   });
 
@@ -184,7 +190,7 @@ test.describe('冻结证据捕获', () => {
     expect(frozenState.isSnapped).toBe(true);
     expect(frozenState.hudText).toContain('是否吸附: 是');
     
-    await page.screenshot({ path: 'docs/evidence/06a-aim-window-base.png' });
+    await page.screenshot({ path: evidencePath('06a-aim-window-base.png') });
     await page.evaluate(() => window.__TEST_API__.unfreeze());
   });
 
@@ -206,7 +212,7 @@ test.describe('冻结证据捕获', () => {
     expect(frozenState.isSnapped).toBe(true);
     expect(frozenState.hudText).toContain('是否吸附: 是');
     
-    await page.screenshot({ path: 'docs/evidence/06b-aim-window-extended.png' });
+    await page.screenshot({ path: evidencePath('06b-aim-window-extended.png') });
     await page.evaluate(() => window.__TEST_API__.unfreeze());
   });
 });

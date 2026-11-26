@@ -3,6 +3,12 @@
  */
 import { test, expect } from '@playwright/test';
 
+// 证据路径：UPDATE_EVIDENCE=1时写入docs/evidence/，否则写入test-results/
+const evidencePath = (filename: string) => 
+  process.env.UPDATE_EVIDENCE === '1' 
+    ? `docs/evidence/${filename}` 
+    : `test-results/evidence-${filename}`;
+
 test.describe('锁定证据', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
@@ -51,7 +57,7 @@ test.describe('锁定证据', () => {
     // 等待徽标显示
     await page.waitForTimeout(300);
     
-    await page.screenshot({ path: 'docs/evidence/04-locked-hint.png' });
+    await page.screenshot({ path: evidencePath('04-locked-hint.png') });
   });
 
   test('04b-only-locked: 唯一锚点锁定放置失败', async ({ page }) => {
@@ -94,6 +100,6 @@ test.describe('锁定证据', () => {
     // 等待徽标显示
     await page.waitForTimeout(300);
     
-    await page.screenshot({ path: 'docs/evidence/04b-only-locked.png' });
+    await page.screenshot({ path: evidencePath('04b-only-locked.png') });
   });
 });

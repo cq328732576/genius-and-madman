@@ -55,9 +55,10 @@ test.describe('Phase 2 发射物理验证', () => {
     expect(result.deltaY).toBeLessThanOrEqual(69);
   });
 
-  test('发射速度：保留约420px/s, 消耗=保留×1.35±3%', async ({ page }) => {
-    // 实际速度受混合影响，约420 px/s (kept)
-    // 消耗应为保留×1.35
+  test('发射速度：保留512±3% px/s, 消耗691±3% px/s', async ({ page }) => {
+    // 从lastLaunch读取发射瞬时速度，未受重力影响
+    // 保留: 16 u/s × 32 = 512 px/s
+    // 消耗: 16 × 1.35 × 32 = 691 px/s
     
     const keptResult = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
@@ -73,11 +74,9 @@ test.describe('Phase 2 发射物理验证', () => {
       window.__TEST_API__.step(16.67);
       window.__TEST_API__.step(300);
       
-      const body = scene.madman.body;
-      const vx = body.velocity.x;
-      const vy = body.velocity.y;
-      const speed = Math.sqrt(vx * vx + vy * vy);
-      return { vx, vy, speed };
+      const launch = scene.lastLaunch;
+      const speed = Math.sqrt(launch.vx * launch.vx + launch.vy * launch.vy);
+      return { vx: launch.vx, vy: launch.vy, speed };
     });
     
     await page.reload();
@@ -98,26 +97,33 @@ test.describe('Phase 2 发射物理验证', () => {
       window.__TEST_API__.step(16.67);
       window.__TEST_API__.step(300);
       
-      const body = scene.madman.body;
-      const vx = body.velocity.x;
-      const vy = body.velocity.y;
-      const speed = Math.sqrt(vx * vx + vy * vy);
-      return { vx, vy, speed };
+      const launch = scene.lastLaunch;
+      const speed = Math.sqrt(launch.vx * launch.vx + launch.vy * launch.vy);
+      return { vx: launch.vx, vy: launch.vy, speed };
     });
     
     console.log('保留发射速度:');
     console.log('  vx:', keptResult.vx.toFixed(1), 'vy:', keptResult.vy.toFixed(1));
     console.log('  |v|:', keptResult.speed.toFixed(1), 'px/s');
+    console.log('  期望: 512 ±3% (497-527 px/s)');
     
     console.log('消耗发射速度:');
     console.log('  vx:', consumedResult.vx.toFixed(1), 'vy:', consumedResult.vy.toFixed(1));
     console.log('  |v|:', consumedResult.speed.toFixed(1), 'px/s');
+    console.log('  期望: 691 ±3% (671-711 px/s)');
     
-    const expectedConsumed = keptResult.speed * 1.35;
     const ratio = consumedResult.speed / keptResult.speed;
     
     console.log('消耗/保留比例:', ratio.toFixed(3));
     console.log('  期望:', 1.35, '±4%: 1.30-1.40');
+    
+    // 断言保留速度 512±3%
+    expect(keptResult.speed).toBeGreaterThanOrEqual(497);
+    expect(keptResult.speed).toBeLessThanOrEqual(527);
+    
+    // 断言消耗速度 691±3%
+    expect(consumedResult.speed).toBeGreaterThanOrEqual(671);
+    expect(consumedResult.speed).toBeLessThanOrEqual(711);
     
     // 断言消耗速度 = 保留×1.35±4%
     expect(ratio).toBeGreaterThanOrEqual(1.30);

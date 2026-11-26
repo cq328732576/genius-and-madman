@@ -3,6 +3,12 @@
  */
 import { test } from '@playwright/test';
 
+// 证据路径：UPDATE_EVIDENCE=1时写入docs/evidence/，否则写入test-results/
+const evidencePath = (filename: string) => 
+  process.env.UPDATE_EVIDENCE === '1' 
+    ? `docs/evidence/${filename}` 
+    : `test-results/evidence-${filename}`;
+
 test.describe('Phase 1 证据', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
@@ -22,14 +28,14 @@ test.describe('Phase 1 证据', () => {
       if (a) scene.createAnchorSprite(a);
     });
     await page.waitForTimeout(500);
-    await page.screenshot({ path: 'docs/evidence/01-valid-placement.png' });
+    await page.screenshot({ path: evidencePath('01-valid-placement.png') });
   });
 
   test('02-禁止放置', async ({ page }) => {
     await page.mouse.move(640, 300);
     await page.mouse.down();
     await page.waitForTimeout(500);
-    await page.screenshot({ path: 'docs/evidence/02-forbidden-placement.png' });
+    await page.screenshot({ path: evidencePath('02-forbidden-placement.png') });
     await page.mouse.up();
   });
 
@@ -42,7 +48,7 @@ test.describe('Phase 1 证据', () => {
       if (a2) scene.createAnchorSprite(a2);
     });
     await page.waitForTimeout(500);
-    await page.screenshot({ path: 'docs/evidence/03a-fifo-before.png' });
+    await page.screenshot({ path: evidencePath('03a-fifo-before.png') });
   });
 
   test('03b-FIFO后', async ({ page }) => {
@@ -56,7 +62,7 @@ test.describe('Phase 1 证据', () => {
       scene.anchorSystem.getAnchors().forEach((a: any) => scene.createAnchorSprite(a));
     });
     await page.waitForTimeout(500);
-    await page.screenshot({ path: 'docs/evidence/03b-fifo-after.png' });
+    await page.screenshot({ path: evidencePath('03b-fifo-after.png') });
   });
 
   test('04-锁定提示', async ({ page }) => {
@@ -88,7 +94,7 @@ test.describe('Phase 1 证据', () => {
     await page.mouse.down();
     await page.waitForTimeout(500);
     
-    await page.screenshot({ path: 'docs/evidence/04-locked-hint.png' });
+    await page.screenshot({ path: evidencePath('04-locked-hint.png') });
     await page.mouse.up();
   });
 
@@ -113,7 +119,7 @@ test.describe('Phase 1 证据', () => {
     
     await page.waitForTimeout(100);
     
-    await page.screenshot({ path: 'docs/evidence/05-snap-success.png' });
+    await page.screenshot({ path: evidencePath('05-snap-success.png') });
   });
 
   test('06a-瞄准窗口基础', async ({ page }) => {
@@ -134,7 +140,7 @@ test.describe('Phase 1 证据', () => {
     });
     
     await page.waitForTimeout(100);
-    await page.screenshot({ path: 'docs/evidence/06a-aim-window-base.png' });
+    await page.screenshot({ path: evidencePath('06a-aim-window-base.png') });
   });
 
   test('06b-瞄准窗口延长', async ({ page }) => {
@@ -155,7 +161,7 @@ test.describe('Phase 1 证据', () => {
     });
     
     await page.waitForTimeout(100);
-    await page.screenshot({ path: 'docs/evidence/06b-aim-window-extended.png' });
+    await page.screenshot({ path: evidencePath('06b-aim-window-extended.png') });
   });
 
   test('07-未吸附短冲刺', async ({ page }) => {
@@ -176,6 +182,6 @@ test.describe('Phase 1 证据', () => {
     // 等待徽标显示（但在消失前捕获）
     await page.waitForTimeout(300);
     
-    await page.screenshot({ path: 'docs/evidence/07-miss-short-dash.png' });
+    await page.screenshot({ path: evidencePath('07-miss-short-dash.png') });
   });
 });

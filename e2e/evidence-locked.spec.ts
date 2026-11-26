@@ -3,6 +3,12 @@
  */
 import { test } from '@playwright/test';
 
+// 证据路径：UPDATE_EVIDENCE=1时写入docs/evidence/，否则写入test-results/
+const evidencePath = (filename: string) => 
+  process.env.UPDATE_EVIDENCE === '1' 
+    ? `docs/evidence/${filename}` 
+    : `test-results/evidence-${filename}`;
+
 test.describe('锁定证据', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
@@ -40,7 +46,7 @@ test.describe('锁定证据', () => {
     await page.mouse.down();
     await page.waitForTimeout(500);
     
-    await page.screenshot({ path: 'docs/evidence/04-locked-hint.png' });
+    await page.screenshot({ path: evidencePath('04-locked-hint.png') });
     await page.mouse.up();
   });
 
@@ -71,7 +77,7 @@ test.describe('锁定证据', () => {
     await page.mouse.down();
     await page.waitForTimeout(500);
     
-    await page.screenshot({ path: 'docs/evidence/04b-only-locked.png' });
+    await page.screenshot({ path: evidencePath('04b-only-locked.png') });
     await page.mouse.up();
   });
 });

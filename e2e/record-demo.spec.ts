@@ -1,6 +1,7 @@
 /**
  * Phase 2 演示视频录制
- * 展示：吸附、方向瞄准+轨迹预览、保留锚点发射、消耗锚点发射
+ * 展示：瞄准、锥角限制、保留发射、消耗发射(2x)
+ * 目标: 15-20秒，无长空闲
  */
 import { test, chromium } from '@playwright/test';
 import * as path from 'path';
@@ -36,109 +37,79 @@ test.describe('Phase 2 演示视频', () => {
              window.__GAME__.scene.scenes[0] && 
              window.__GAME__.scene.scenes[0].sys.isActive();
     }, { timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
-    // 场景1: 吸附
+    // 场景1: 吸附并瞄准扫描 (5秒)
     await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
       scene.madman.setPosition(785, 768);
       scene.dashCooldown = 0;
-    });
-    await page.waitForTimeout(1500);
-
-    // 执行冲刺并吸附
-    await page.evaluate(() => {
       window.__TEST_API__.setHoldDash(false);
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
     });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(800);
 
-    // 场景2: 方向瞄准 + 轨迹预览（扫向锥角边缘）
-    // 从向上开始
-    await page.evaluate(() => {
-      window.__TEST_API__.setAimDirection(0, -1);
-      window.__TEST_API__.step(16.67);
-    });
-    await page.waitForTimeout(1500);
+    // 快速扫描：向上 → 右边缘 → 左边缘 → 向上
+    await page.evaluate(() => window.__TEST_API__.setAimDirection(0, -1));
+    await page.waitForTimeout(500);
 
-    // 慢慢扫向右边缘
-    for (let i = 0; i <= 10; i++) {
+    for (let i = 0; i <= 7; i++) {
       await page.evaluate((angle) => {
         const rad = angle * Math.PI / 180;
         window.__TEST_API__.setAimDirection(Math.sin(rad), -Math.cos(rad));
-        window.__TEST_API__.step(16.67);
-      }, i * 7); // 0 to 70 degrees
-      await page.waitForTimeout(150);
+      }, i * 10); // 0 to 70 degrees
+      await page.waitForTimeout(100);
     }
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(500);
 
-    // 慢慢扫向左边缘
-    for (let i = 0; i <= 14; i++) {
+    for (let i = 7; i >= -7; i--) {
       await page.evaluate((angle) => {
-        const rad = -angle * Math.PI / 180;
+        const rad = angle * Math.PI / 180;
         window.__TEST_API__.setAimDirection(Math.sin(rad), -Math.cos(rad));
-        window.__TEST_API__.step(16.67);
-      }, i * 10); // 0 to -140 degrees (both edges)
-      await page.waitForTimeout(150);
+      }, i * 10); // 70 to -70 degrees
+      await page.waitForTimeout(80);
     }
-    await page.waitForTimeout(1500);
-    
+    await page.waitForTimeout(500);
+
     // 回到向上
-    await page.evaluate(() => {
-      window.__TEST_API__.setAimDirection(0, -1);
-      window.__TEST_API__.step(16.67);
-    });
-    await page.waitForTimeout(1000);
+    await page.evaluate(() => window.__TEST_API__.setAimDirection(0, -1));
+    await page.waitForTimeout(500);
 
-    // 场景3: 保留锚点发射
+    // 场景2: 保留发射 (4秒)
     await page.evaluate(() => {
-      window.__TEST_API__.setAimDirection(0, -1);
       window.__TEST_API__.setConsume(false);
-      window.__TEST_API__.step(16.67);
+      window.__TEST_API__.step(300); // 触发发射
     });
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(2500); // 观察飞行弧线
 
-    // 触发发射
-    await page.evaluate(() => {
-      window.__TEST_API__.step(300); // 等待瞄准窗口结束
-    });
-    await page.waitForTimeout(3000); // 观察完整飞行弧线
-
-    // 场景4: 准备第二次吸附并消耗
+    // 场景3: 重新吸附 (1秒)
     await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
-      // 重新放置锚点
-      if (window.__TEST_API__.getAnchors().length === 0) {
-        window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
-      }
+      window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
       scene.madman.setPosition(785, 768);
       scene.dashCooldown = 0;
-    });
-    await page.waitForTimeout(1500);
-
-    // 再次吸附
-    await page.evaluate(() => {
       window.__TEST_API__.setHoldDash(false);
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
     });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
-    // 场景5: 消耗锚点发射（按C键）
+    // 场景4: 消耗发射，HUD显示21.6 (6秒)
     await page.evaluate(() => {
-      window.__TEST_API__.setAimDirection(0.3, -1);
+      window.__TEST_API__.setAimDirection(0, -1);
       window.__TEST_API__.setConsume(true); // 消耗模式
       window.__TEST_API__.step(16.67);
     });
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1000); // 让HUD显示21.6
 
-    // 触发消耗发射
     await page.evaluate(() => {
-      window.__TEST_API__.step(300); // 等待瞄准窗口结束
+      window.__TEST_API__.step(300); // 触发发射
     });
-    await page.waitForTimeout(3500); // 观察完整飞行弧线（更高）
+    await page.waitForTimeout(3500); // 观察更高的飞行弧线
+
+    // 总计约17秒
 
     // 保存视频
     await context.close();

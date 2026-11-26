@@ -117,9 +117,9 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
     await page.evaluate(() => window.__TEST_API__.unfreeze());
   });
 
-  test('P2-03: 保留锚点发射（发射后捕获）', async ({ page }) => {
+  test('P2-03: 保留锚点发射（峰值捕获）', async ({ page }) => {
     // 放置锚点并吸附
-    await page.evaluate(() => {
+    const result = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
       scene.madman.setPosition(785, 768);
@@ -138,21 +138,30 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
       // 等待瞄准窗口结束（触发发射）
       window.__TEST_API__.step(300);
       
-      // 发射后等待0.15-0.2s让疯子明显在空中
-      window.__TEST_API__.step(175);
-
-      return { beforeAnchors };
-    });
-
-    const result = await page.evaluate(() => {
-      const scene = window.__GAME__.scene.scenes[0] as any;
+      const launchY = scene.lastLaunch.y;
+      
+      // 步进到vy穿越0（峰值）
+      let minY = launchY;
+      for (let i = 0; i < 100; i++) {
+        window.__TEST_API__.step(16.67);
+        const currentY = scene.madman.y;
+        const vy = scene.madman.body.velocity.y;
+        
+        if (currentY < minY) minY = currentY;
+        
+        // vy从负变正，到达峰值
+        if (vy >= 0) break;
+      }
+      
+      const rise = launchY - minY;
       const afterAnchors = window.__TEST_API__.getAnchors().length;
       const state = window.__TEST_API__.getState();
-      return { afterAnchors, state };
+      return { beforeAnchors, afterAnchors, state, rise };
     });
 
     console.log('P2-03 result:', result);
     console.log('P2-03 lastLaunchSpeed:', result.state.lastLaunchSpeed, 'u/s');
+    console.log('P2-03 rise:', result.rise.toFixed(1), 'px');
 
     // 验证锚点未被消耗
     expect(result.afterAnchors).toBe(1);
@@ -177,9 +186,9 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
     await page.evaluate(() => window.__TEST_API__.unfreeze());
   });
 
-  test('P2-04: 消耗锚点发射（发射后捕获）', async ({ page }) => {
+  test('P2-04: 消耗锚点发射（峰值捕获）', async ({ page }) => {
     // 放置锚点并吸附
-    await page.evaluate(() => {
+    const result = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
       scene.madman.setPosition(785, 768);
@@ -198,21 +207,30 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
       // 等待瞄准窗口结束（触发发射）
       window.__TEST_API__.step(300);
       
-      // 发射后等待几帧让疯子离开地面
-      window.__TEST_API__.step(100);
-
-      return { beforeAnchors };
-    });
-
-    const result = await page.evaluate(() => {
-      const scene = window.__GAME__.scene.scenes[0] as any;
+      const launchY = scene.lastLaunch.y;
+      
+      // 步进到vy穿越0（峰值）
+      let minY = launchY;
+      for (let i = 0; i < 100; i++) {
+        window.__TEST_API__.step(16.67);
+        const currentY = scene.madman.y;
+        const vy = scene.madman.body.velocity.y;
+        
+        if (currentY < minY) minY = currentY;
+        
+        // vy从负变正，到达峰值
+        if (vy >= 0) break;
+      }
+      
+      const rise = launchY - minY;
       const afterAnchors = window.__TEST_API__.getAnchors().length;
       const state = window.__TEST_API__.getState();
-      return { afterAnchors, state };
+      return { beforeAnchors, afterAnchors, state, rise };
     });
 
     console.log('P2-04 result:', result);
     console.log('P2-04 lastLaunchSpeed:', result.state.lastLaunchSpeed, 'u/s');
+    console.log('P2-04 rise:', result.rise.toFixed(1), 'px');
 
     // 验证锚点被消耗
     expect(result.afterAnchors).toBe(0);
