@@ -43,6 +43,7 @@ declare global {
     __GAME__: Phaser.Game;
     __TEST_API__: {
       placeAnchor: (x: number, y: number) => boolean;
+      placeAnchorAt: (ux: number, uy: number) => { success: boolean; reason?: string };
       lockAnchor: (index: number) => boolean;
       setMadmanPosition: (x: number, y: number) => void;
       setGeniusPosition: (x: number, y: number) => void;
@@ -71,6 +72,11 @@ window.__TEST_API__ = {
       return true;
     }
     return false;
+  },
+  placeAnchorAt: (ux: number, uy: number) => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return { success: false, reason: 'no_scene' };
+    return scene.placeAnchorAtPosition({ x: ux, y: uy });
   },
   lockAnchor: (index: number) => {
     const scene = game.scene.scenes[0] as any;

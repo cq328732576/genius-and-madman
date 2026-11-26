@@ -411,6 +411,19 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  public placeAnchorAtPosition(pos: Vec2): { success: boolean; reason?: string } {
+    // 直接放置锚点（用于测试）
+    const anchor = this.anchorSystem.placeAnchor(pos, 'ground');
+
+    if (anchor) {
+      this.createAnchorSprite(anchor);
+      return { success: true };
+    } else {
+      // 放置失败（所有锚点被锁定）
+      return { success: false, reason: 'locked_anchor' };
+    }
+  }
+
   private createAnchorSprite(anchor: Anchor) {
     const pos = this.unitsToPixels(anchor.position.x, anchor.position.y);
 
