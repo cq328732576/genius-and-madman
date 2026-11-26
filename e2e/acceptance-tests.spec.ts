@@ -118,9 +118,7 @@ test.describe('Phase 1 验收测试', () => {
     expect(finalState.badgeTexture).toBe('snap_badge_miss_zh_m');
   });
 
-  test.skip('锁定行为 - A锁定B自由则B被替换', async ({ page }) => {
-    // SKIP: Phase 1 锁定行为测试，依赖setHoldDash持续吸附机制
-    // Phase 2未修改锁定逻辑，测试预期可能过时
+  test('锁定行为 - A锁定B自由则B被替换', async ({ page }) => {
     await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       
@@ -162,9 +160,7 @@ test.describe('Phase 1 验收测试', () => {
     expect(state.isSnapped).toBe(true); // A仍然锁定
   });
 
-  test.skip('锁定行为 - 所有锚点锁定则放置失败', async ({ page }) => {
-    // SKIP: Phase 1 锁定行为测试，依赖setHoldDash持续吸附机制
-    // Phase 2未修改锁定逻辑，测试预期可能过时
+  test('锁定行为 - 所有锚点锁定则放置失败', async ({ page }) => {
     // 注意：在max=2+单疯子情况下，这种情况理论上不可能（只能锁定1个）
     // 但我们可以测试单锚点锁定的情况
     
