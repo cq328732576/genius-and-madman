@@ -1,0 +1,232 @@
+
+Running 5 tests using 1 worker
+
+(node:10155) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/5] [chromium] › e2e/real-flow.spec.ts:20:3 › Phase 1 真实游戏流程 › 05-吸附成功：真实冲刺流程
+[chromium] › e2e/real-flow.spec.ts:20:3 › Phase 1 真实游戏流程 › 05-吸附成功：真实冲刺流程
+Setup: { anchorPlaced: true, anchorX: 28.125 }
+
+After dash state: {
+  isSnapped: false,
+  snappedAnchorId: null,
+  aimWindowTimer: 0,
+  dashCooldown: 0.29999000000000015,
+  madmanX: 600,
+  madmanY: 767.4,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_miss_zh_m'
+}
+
+  1) [chromium] › e2e/real-flow.spec.ts:20:3 › Phase 1 真实游戏流程 › 05-吸附成功：真实冲刺流程 ─────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      59 |     console.log('After dash state:', state);
+      60 |     
+    > 61 |     expect(state.isSnapped).toBe(true);
+         |                             ^
+      62 |     expect(state.aimWindowTimer).toBeGreaterThan(0);
+      63 |     expect(state.aimWindowTimer).toBeLessThanOrEqual(0.28);
+      64 |     
+        at /workspace/e2e/real-flow.spec.ts:61:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-05-吸附成功：真实冲刺流程-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-05-吸附成功：真实冲刺流程-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/real-flow-Phase-1-真实游戏流程-05-吸附成功：真实冲刺流程-chromium/error-context.md
+
+
+(node:10251) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[2/5] [chromium] › e2e/real-flow.spec.ts:73:3 › Phase 1 真实游戏流程 › 06a-瞄准窗口：基础时间
+  2) [chromium] › e2e/real-flow.spec.ts:73:3 › Phase 1 真实游戏流程 › 06a-瞄准窗口：基础时间 ──────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      91 |     // 验证吸附
+      92 |     let state = await page.evaluate(() => window.__TEST_API__.getState());
+    > 93 |     expect(state.isSnapped).toBe(true);
+         |                             ^
+      94 |     
+      95 |     // 步进到瞄准窗口中间（约 0.15s）
+      96 |     await page.evaluate(() => {
+        at /workspace/e2e/real-flow.spec.ts:93:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-06a-瞄准窗口：基础时间-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-06a-瞄准窗口：基础时间-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/real-flow-Phase-1-真实游戏流程-06a-瞄准窗口：基础时间-chromium/error-context.md
+
+
+(node:10348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[3/5] [chromium] › e2e/real-flow.spec.ts:115:3 › Phase 1 真实游戏流程 › 06b-瞄准窗口：延长到上限
+[chromium] › e2e/real-flow.spec.ts:115:3 › Phase 1 真实游戏流程 › 06b-瞄准窗口：延长到上限
+Extended aim window state: {
+  isSnapped: false,
+  snappedAnchorId: null,
+  aimWindowTimer: 0,
+  dashCooldown: 0.5000199999999998,
+  madmanX: 621.3333333333334,
+  madmanY: 767.4,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_miss_zh_m'
+}
+
+  3) [chromium] › e2e/real-flow.spec.ts:115:3 › Phase 1 真实游戏流程 › 06b-瞄准窗口：延长到上限 ────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      144 |     console.log('Extended aim window state:', state);
+      145 |     
+    > 146 |     expect(state.isSnapped).toBe(true);
+          |                             ^
+      147 |     expect(state.aimWindowTimer).toBeGreaterThan(0.35);
+      148 |     expect(state.aimWindowTimer).toBeLessThanOrEqual(0.50);
+      149 |     
+        at /workspace/e2e/real-flow.spec.ts:146:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-06b-瞄准窗口：延长到上限-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-06b-瞄准窗口：延长到上限-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/real-flow-Phase-1-真实游戏流程-06b-瞄准窗口：延长到上限-chromium/error-context.md
+
+
+(node:10443) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[4/5] [chromium] › e2e/real-flow.spec.ts:153:3 › Phase 1 真实游戏流程 › 07-未吸附：短冲刺 + 徽标
+[chromium] › e2e/real-flow.spec.ts:153:3 › Phase 1 真实游戏流程 › 07-未吸附：短冲刺 + 徽标
+Initial position: 400
+
+After miss state: {
+  isSnapped: false,
+  snappedAnchorId: null,
+  aimWindowTimer: 0,
+  dashCooldown: 0.3833700000000002,
+  madmanX: 421.3333333333333,
+  madmanY: 767.4,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 0,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_miss_zh_m'
+}
+
+Distance travelled: 21.333333333333314 px (expected ~128px)
+
+  4) [chromium] › e2e/real-flow.spec.ts:153:3 › Phase 1 真实游戏流程 › 07-未吸附：短冲刺 + 徽标 ───────────────────
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 100
+    Received:   21.333333333333314
+
+      187 |     const distance = state.madmanX - initialState.madmanX;
+      188 |     console.log('Distance travelled:', distance, 'px (expected ~128px)');
+    > 189 |     expect(distance).toBeGreaterThan(100);
+          |                      ^
+      190 |     expect(distance).toBeLessThan(200);
+      191 |     
+      192 |     // 验证"未吸附"徽标
+        at /workspace/e2e/real-flow.spec.ts:189:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-07-未吸附：短冲刺-徽标-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-07-未吸附：短冲刺-徽标-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/real-flow-Phase-1-真实游戏流程-07-未吸附：短冲刺-徽标-chromium/error-context.md
+
+
+(node:10541) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[5/5] [chromium] › e2e/real-flow.spec.ts:199:3 › Phase 1 真实游戏流程 › 04-锁定提示：使用中徽标
+[chromium] › e2e/real-flow.spec.ts:199:3 › Phase 1 真实游戏流程 › 04-锁定提示：使用中徽标
+Setup: { a1Locked: true, a2Locked: true }
+
+Locked hint state: {
+  isSnapped: false,
+  snappedAnchorId: null,
+  aimWindowTimer: 0.01665999999999999,
+  dashCooldown: 0,
+  madmanX: 488.53333333333336,
+  madmanY: 767.4,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 2,
+  badgeVisible: false,
+  badgeTexture: null
+}
+
+  5) [chromium] › e2e/real-flow.spec.ts:199:3 › Phase 1 真实游戏流程 › 04-锁定提示：使用中徽标 ─────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      238 |     
+      239 |     expect(state.anchorsCount).toBe(2); // 仍然是 2 个
+    > 240 |     expect(state.badgeVisible).toBe(true);
+          |                                ^
+      241 |     expect(state.badgeTexture).toBe('snap_badge_inuse_zh_g');
+      242 |     
+      243 |     await page.screenshot({ path: 'docs/evidence/04-locked-hint.png' });
+        at /workspace/e2e/real-flow.spec.ts:240:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-04-锁定提示：使用中徽标-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/real-flow-Phase-1-真实游戏流程-04-锁定提示：使用中徽标-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/real-flow-Phase-1-真实游戏流程-04-锁定提示：使用中徽标-chromium/error-context.md
+
+
+  5 failed
+    [chromium] › e2e/real-flow.spec.ts:20:3 › Phase 1 真实游戏流程 › 05-吸附成功：真实冲刺流程 ──────────────────────
+    [chromium] › e2e/real-flow.spec.ts:73:3 › Phase 1 真实游戏流程 › 06a-瞄准窗口：基础时间 ───────────────────────
+    [chromium] › e2e/real-flow.spec.ts:115:3 › Phase 1 真实游戏流程 › 06b-瞄准窗口：延长到上限 ─────────────────────
+    [chromium] › e2e/real-flow.spec.ts:153:3 › Phase 1 真实游戏流程 › 07-未吸附：短冲刺 + 徽标 ────────────────────
+    [chromium] › e2e/real-flow.spec.ts:199:3 › Phase 1 真实游戏流程 › 04-锁定提示：使用中徽标 ──────────────────────

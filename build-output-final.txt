@@ -1,0 +1,13 @@
+
+> genius-and-madman@1.0.0 build
+> tsc && vite build
+
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 11 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.56 kB │ gzip:   0.42 kB
+dist/assets/main-C0vuWjxL.js  1,388.19 kB │ gzip: 363.98 kB
+
+✓ built in 518ms
