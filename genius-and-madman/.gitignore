@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+artifacts/
+test-results/
+playwright-report/
+.vite
+.cache

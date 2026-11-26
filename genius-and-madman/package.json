@@ -1,0 +1,27 @@
+{
+  "name": "genius-and-madman",
+  "version": "1.0.0",
+  "description": "Genius and Madman - Anchor vs Burst co-op platformer",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:shots": "playwright test --project=chromium"
+  },
+  "keywords": ["phaser", "typescript", "platformer", "coop"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.6",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "phaser": "^3.87.0"
+  }
+}
