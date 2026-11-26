@@ -16,6 +16,50 @@ test.describe('Phase 2 发射物理验证', () => {
     await page.waitForTimeout(1000);
   });
 
+  test('校准：自由落体0.5s应下落约62.5px', async ({ page }) => {
+    // 理论：g = 500 px/s², Δy = 0.5*g*t² = 0.5*500*0.25 = 62.5px
+    // 允许±10%: 56-69px
+    
+    const result = await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      
+      // 将madman放在空中，关闭重力
+      scene.madman.setPosition(400, 300);
+      const body = scene.madman.body;
+      body.setVelocity(0, 0);
+      body.allowGravity = false;
+      
+      // 推进一帧让位置稳定
+      window.__TEST_API__.step(16.67);
+      
+      const startY = scene.madman.y;
+      
+      // 开启重力，自由落体0.5s (30帧)
+      body.allowGravity = true;
+      for (let i = 0; i < 30; i++) {
+        window.__TEST_API__.step(16.67);
+      }
+      
+      const endY = scene.madman.y;
+      const bodyY = body.y;
+      const bodyVelY = body.velocity.y;
+      return { startY, endY, deltaY: endY - startY, bodyY, bodyVelY };
+    });
+    
+    console.log('自由落体校准:');
+    console.log('  起始y:', result.startY.toFixed(1));
+    console.log('  结束y:', result.endY.toFixed(1));
+    console.log('  下落Δy:', result.deltaY.toFixed(1), 'px');
+    console.log('  body.y:', result.bodyY.toFixed(1));
+    console.log('  body.velocity.y:', result.bodyVelY.toFixed(1));
+    console.log('  理论:', 62.5, 'px');
+    console.log('  允许范围:', '56-69 px');
+    
+    // 断言Δy在56-69px范围内（±10%）
+    expect(result.deltaY).toBeGreaterThanOrEqual(56);
+    expect(result.deltaY).toBeLessThanOrEqual(69);
+  });
+
   test('保留锚点向上发射：峰值高度 ≥ 220px', async ({ page }) => {
     // 理论：v = 16 u/s = 512 px/s, g = 500 px/s²
     // 峰值高度 = v²/(2g) = 512²/(2*500) ≈ 262px

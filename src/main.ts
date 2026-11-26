@@ -111,22 +111,16 @@ window.__TEST_API__ = {
     const dt = 16.67; // 60 FPS (毫秒)
     const steps = Math.ceil(ms / dt);
     for (let i = 0; i < steps; i++) {
-      // 1. 更新场景逻辑
-      scene.update(0, dt);
-      
-      // 2. 更新物理世界
+      // 使用world.update()而不是step()
       scene.physics.world.update(0, dt);
-      
-      // 3. 手动同步sprite位置从body
-      const geniusBody = scene.genius.body;
-      if (geniusBody) {
-        scene.genius.x = geniusBody.x + geniusBody.halfWidth;
-        scene.genius.y = geniusBody.y + geniusBody.halfHeight;
+      // 手动同步sprite位置 = body中心
+      if (scene.genius.body) {
+        scene.genius.x = scene.genius.body.center.x;
+        scene.genius.y = scene.genius.body.center.y;
       }
-      const madmanBody = scene.madman.body;
-      if (madmanBody) {
-        scene.madman.x = madmanBody.x + madmanBody.halfWidth;
-        scene.madman.y = madmanBody.y + madmanBody.halfHeight;
+      if (scene.madman.body) {
+        scene.madman.x = scene.madman.body.center.x;
+        scene.madman.y = scene.madman.body.center.y;
       }
     }
   },
