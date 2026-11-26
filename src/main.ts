@@ -206,6 +206,7 @@ window.__TEST_API__ = {
         scene.consumeAnchor,
         { x: 0, y: -1 }
       );
+      // calculateLaunchVelocity返回值已经是u/s，不需要转换
       launchSpeed = Math.sqrt(launchVelocity.x * launchVelocity.x + launchVelocity.y * launchVelocity.y);
     }
     
@@ -220,7 +221,7 @@ window.__TEST_API__ = {
       madmanVelY: scene.madman.body.velocity.y,
       anchorsCount: scene.anchorSystem.getAnchors().length,
       badgeVisible: scene.snapBadge?.visible || false,
-      badgeTexture: scene.snapBadge?.texture.key || null,
+      badgeTexture: scene.snapBadge?.texture.key || '',
       inUseBadgeVisible: scene.snapBadge?.visible && scene.snapBadge?.texture.key === 'snap_badge_inuse_zh_g',
       hudText,
       // Phase 2: 新增状态
@@ -231,6 +232,28 @@ window.__TEST_API__ = {
       lastLaunchSpeed: scene.lastLaunchSpeed,
       consumeAnchor: scene.consumeAnchor,
       trajectoryPointsLength: scene.trajectoryDots.length,
+      // 环状态（从第一个锚点获取）
+      ringVisible: (() => {
+        const anchors = scene.anchorSystem.getAnchors();
+        if (anchors.length === 0) return false;
+        const container = scene.anchorSprites.get(anchors[0].id);
+        const ring = container?.getData('snapRing');
+        return ring?.visible || false;
+      })(),
+      ringTextureKey: (() => {
+        const anchors = scene.anchorSystem.getAnchors();
+        if (anchors.length === 0) return '';
+        const container = scene.anchorSprites.get(anchors[0].id);
+        const ring = container?.getData('snapRing');
+        return ring?.texture?.key || '';
+      })(),
+      ringDisplayWidth: (() => {
+        const anchors = scene.anchorSystem.getAnchors();
+        if (anchors.length === 0) return 0;
+        const container = scene.anchorSprites.get(anchors[0].id);
+        const ring = container?.getData('snapRing');
+        return ring?.displayWidth || 0;
+      })(),
     };
   },
   getAnchors: () => {

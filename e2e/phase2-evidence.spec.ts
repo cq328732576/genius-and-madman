@@ -98,6 +98,13 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
     expect(state.clampedAngle).toBeCloseTo(-20, 0.5);
     expect(state.hudText).toContain('限制瞄准:');
     expect(state.trajectoryPointsLength).toBeGreaterThan(0);
+    
+    // 验证瞄准时显示的速度（应该是16.0，不是0.5）
+    expect(state.launchSpeed).toBeCloseTo(16.0, 0.1);
+    
+    // 验证环可见
+    expect(state.ringVisible).toBe(true);
+    expect(state.ringTextureKey).toBe('snap_ring_bold_m');
 
     // 截图
     const screenshotPath = path.join(evidenceDir, 'P2-02-cone-limit.png');
@@ -319,10 +326,17 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
       
-      // 疯子在接近锚点的位置，但还未吸附
-      scene.madman.setPosition(900 - 80, 768);
+      // 疯子在接近锚点的位置（约3u距离）
+      scene.madman.setPosition(900 - 96, 768);
     });
 
+    // 冻结并获取状态
+    await page.evaluate(() => window.__TEST_API__.freeze());
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+
+    const state = await page.evaluate(() => window.__TEST_API__.getState());
+    console.log('P2-07 state:', state);
+    
     // 检查环的属性
     const ringInfo = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
@@ -337,11 +351,11 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
       if (!snapRing) return null;
 
       return {
+        visible: snapRing.visible,
         textureKey: snapRing.texture?.key || 'unknown',
         scale: snapRing.scale,
-        // 环半径 = 118 * scale
         displayRadius: 118 * snapRing.scale,
-        displayWidth: 256 * snapRing.scale,
+        displayWidth: snapRing.displayWidth,
       };
     });
 
@@ -349,16 +363,19 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
 
     // 验证环的属性
     expect(ringInfo).not.toBeNull();
-    expect(ringInfo!.textureKey).toMatch(/snap_ring_bold_/);
+    expect(ringInfo!.visible).toBe(true); // 环应该可见
+    expect(ringInfo!.textureKey).toBe('snap_ring_bold_m');
     expect(ringInfo!.displayRadius).toBeCloseTo(64, 1); // 2.0u * 32px/u = 64px
-    // displayWidth = 256 * scale = 256 * 0.542 ≈ 138.8
+    // displayWidth ≈ 139 (256 * 0.542)
     expect(ringInfo!.displayWidth).toBeGreaterThan(130);
     expect(ringInfo!.displayWidth).toBeLessThan(145);
+    
+    // 验证通过getState也能获取
+    expect(state.ringVisible).toBe(true);
+    expect(state.ringTextureKey).toBe('snap_ring_bold_m');
+    expect(state.ringDisplayWidth).toBeGreaterThan(130);
 
-    // 冻结并截图
-    await page.evaluate(() => window.__TEST_API__.freeze());
-    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
-
+    // 截图
     const screenshotPath = path.join(evidenceDir, 'P2-07-bold-ring.png');
     await page.screenshot({ path: screenshotPath });
 

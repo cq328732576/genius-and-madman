@@ -491,13 +491,14 @@ export class GameScene extends Phaser.Scene {
     container.add(halo);
 
     // Phase 2: 吸附半径环（使用粗环美术资源）
-    const snapRadius = tuning.madman.snapRadius * tuning.world.pixelsPerUnit;
+    // snapRadius已经是像素: 2.0u * 32px/u = 64px
+    const snapRadiusPx = tuning.madman.snapRadius * tuning.world.pixelsPerUnit;
     const snapRing = this.add.image(0, 0, 'snap_ring_bold_m');
-    // 环半径 118px ↔ 判定半径 2.0 单位，缩放 = (2.0×32)/118 ≈ 0.54
-    const ringScale = snapRadius / 118;
+    // 环纹理半径 118px，缩放 = 64/118 ≈ 0.542
+    const ringScale = snapRadiusPx / 118;
     snapRing.setScale(ringScale);
-    snapRing.setAlpha(0.8);
-    snapRing.setVisible(false);
+    snapRing.setAlpha(0.9); // 更高不透明度以更清晰可见
+    snapRing.setVisible(true); // 始终可见
     container.add(snapRing);
 
     // 可吸附徽标
@@ -913,7 +914,7 @@ export class GameScene extends Phaser.Scene {
       clampedAngle = angles.clampedAngle;
       finalAngle = angles.finalAngle;
       
-      // 计算发射速度
+      // 计算发射速度（calculateLaunchVelocity返回值已经是u/s）
       const launchVelocity = this.anchorSystem.calculateLaunchVelocity(
         this.incomingDashDir,
         this.aimDirection,
@@ -923,7 +924,7 @@ export class GameScene extends Phaser.Scene {
       launchSpeed = Math.sqrt(
         launchVelocity.x * launchVelocity.x + 
         launchVelocity.y * launchVelocity.y
-      ) / tuning.world.pixelsPerUnit;
+      ); // 不需要除以pixelsPerUnit，已经是u/s
     }
     
     const lines = [
