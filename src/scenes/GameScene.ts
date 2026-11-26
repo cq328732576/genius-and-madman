@@ -419,8 +419,36 @@ export class GameScene extends Phaser.Scene {
       this.createAnchorSprite(anchor);
       return { success: true };
     } else {
-      // 放置失败（所有锚点被锁定）
+      // 放置失败（所有锚点被锁定）- 显示"使用中"徽标在被锁定的锚点上
+      this.showInUseBadge();
       return { success: false, reason: 'locked_anchor' };
+    }
+  }
+
+  private showInUseBadge() {
+    // 找到被锁定的锚点并显示"使用中"徽标
+    const anchors = this.anchorSystem.getAnchors();
+    const lockedAnchor = anchors.find(a => a.state === 'locked');
+    
+    if (lockedAnchor) {
+      const pos = this.unitsToPixels(lockedAnchor.position.x, lockedAnchor.position.y);
+      
+      if (!this.snapBadge) {
+        this.snapBadge = this.add.image(0, 0, 'snap_badge_inuse_zh_g');
+        this.snapBadge.setScale(0.9);
+      } else {
+        this.snapBadge.setTexture('snap_badge_inuse_zh_g');
+      }
+      
+      this.snapBadge.setPosition(pos.x, pos.y - 90);
+      this.snapBadge.setVisible(true);
+      
+      // 1秒后隐藏
+      this.time.delayedCall(1000, () => {
+        if (this.snapBadge) {
+          this.snapBadge.setVisible(false);
+        }
+      });
     }
   }
 
