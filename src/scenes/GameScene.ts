@@ -12,6 +12,7 @@ export class GameScene extends Phaser.Scene {
   private anchorSystem!: AnchorSystem;
   private surfaces: Surface[] = [];
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
+  public frozen = false; // 冻结标志（用于截图）
 
   // 角色
   private genius!: Phaser.Physics.Arcade.Sprite;
@@ -278,6 +279,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
+    // 冻结时跳过更新
+    if (this.frozen) {
+      return;
+    }
+    
     const dt = delta / 1000;
 
     // 更新冷却（限制在 0 以上）

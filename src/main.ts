@@ -50,6 +50,8 @@ declare global {
       step: (ms: number) => void;
       triggerDash: (direction: 'left' | 'right') => void;
       setHoldDash: (hold: boolean) => void;
+      freeze: () => void;
+      unfreeze: () => void;
       getState: () => any;
       getAnchors: () => any[];
     };
@@ -142,10 +144,41 @@ window.__TEST_API__ = {
     if (!scene) return;
     scene.testHoldDash = hold;
   },
+  // 冻结游戏状态（用于截图）
+  freeze: () => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    scene.frozen = true;
+    scene.physics.world.pause();
+    scene.time.paused = true;
+    scene.tweens.pauseAll();
+    // 强制更新HUD
+    if (scene.updateDebugPanel) scene.updateDebugPanel();
+    // 确保"使用中"徽标在冻结时可见
+    if (scene.snapBadge && scene.snapBadge.texture.key === 'snap_badge_inuse_zh_g') {
+      scene.snapBadge.setVisible(true);
+    }
+  },
+  // 解冻游戏状态
+  unfreeze: () => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    scene.frozen = false;
+    scene.physics.world.resume();
+    scene.time.paused = false;
+    scene.tweens.resumeAll();
+  },
   // 获取游戏状态
   getState: () => {
     const scene = game.scene.scenes[0] as any;
     if (!scene) return null;
+    
+    // 获取HUD文本
+    let hudText = '';
+    if (scene.debugPanel && scene.debugPanel.text) {
+      hudText = scene.debugPanel.text;
+    }
+    
     return {
       isSnapped: scene.isSnapped,
       snappedAnchorId: scene.snappedAnchorId,
@@ -158,6 +191,8 @@ window.__TEST_API__ = {
       anchorsCount: scene.anchorSystem.getAnchors().length,
       badgeVisible: scene.snapBadge?.visible || false,
       badgeTexture: scene.snapBadge?.texture.key || null,
+      inUseBadgeVisible: scene.snapBadge?.visible && scene.snapBadge?.texture.key === 'snap_badge_inuse_zh_g',
+      hudText,
     };
   },
   getAnchors: () => {
