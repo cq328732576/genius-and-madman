@@ -184,19 +184,28 @@ window.__TEST_API__ = {
       hudText = scene.debugPanel.text;
     }
     
-    // Phase 2: 计算瞄准角度和弹射速度
-    let aimAngleDeg = 0;
-    let clampedAngleDeg = 0;
+    // Phase 2: 计算三个角度值和发射速度
+    let rawAngle = 0;
+    let clampedAngle = 0;
+    let finalAngle = 0;
     let launchSpeed = 0;
+    
     if (scene.isSnapped && scene.aimDirection) {
-      aimAngleDeg = Math.atan2(scene.aimDirection.y, scene.aimDirection.x) * 180 / Math.PI;
+      const angles = scene.anchorSystem.calculateAimAngles(
+        scene.incomingDashDir,
+        scene.aimDirection,
+        { x: 0, y: -1 }
+      );
+      rawAngle = angles.rawAngle;
+      clampedAngle = angles.clampedAngle;
+      finalAngle = angles.finalAngle;
       
       const launchVelocity = scene.anchorSystem.calculateLaunchVelocity(
         scene.incomingDashDir,
         scene.aimDirection,
-        scene.consumeAnchor
+        scene.consumeAnchor,
+        { x: 0, y: -1 }
       );
-      clampedAngleDeg = Math.atan2(launchVelocity.y, launchVelocity.x) * 180 / Math.PI;
       launchSpeed = Math.sqrt(launchVelocity.x * launchVelocity.x + launchVelocity.y * launchVelocity.y);
     }
     
@@ -215,8 +224,9 @@ window.__TEST_API__ = {
       inUseBadgeVisible: scene.snapBadge?.visible && scene.snapBadge?.texture.key === 'snap_badge_inuse_zh_g',
       hudText,
       // Phase 2: 新增状态
-      aimAngleDeg,
-      clampedAngleDeg,
+      rawAngle,
+      clampedAngle,
+      finalAngle,
       launchSpeed,
       consumeAnchor: scene.consumeAnchor,
       trajectoryPointsLength: scene.trajectoryDots.length,

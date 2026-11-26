@@ -190,41 +190,44 @@ export class AnchorSystem {
 
   /**
    * 计算弹射方向和初速
-   * d = normalize((1 - w) · d_in + w · d_input)
-   * 再限制在锥角内
+   * 1. 先将输入方向限制在锥角内
+   * 2. 混合: d = normalize((1 - w) · d_in + w · d_clamped)
+   * 3. 再次限制混合后的方向在锥角内
    */
   calculateLaunchVelocity(
     approachDir: Vec2,
     inputDir: Vec2 | null,
-    consume: boolean
+    consume: boolean,
+    launchAxis?: Vec2  // 发射轴（默认向上）
   ): Vec2 {
     const w = this.config.madman.directionMixWeight;
     const baseSpeed = this.config.madman.launchSpeedBase;
     const multiplier = consume
       ? this.config.madman.consumeMultiplier
       : this.config.madman.preserveMultiplier;
+    const coneAngle = this.config.madman.directionConeAngle;
+    
+    // 使用发射轴（默认向上）作为锥角中心
+    const axis = launchAxis || { x: 0, y: -1 };
 
-    // 混合方向
-    let mixedDir: Vec2;
+    // 1. 先限制输入方向在锥角内
+    let clampedInput: Vec2;
     if (inputDir && (inputDir.x !== 0 || inputDir.y !== 0)) {
-      mixedDir = {
-        x: (1 - w) * approachDir.x + w * inputDir.x,
-        y: (1 - w) * approachDir.y + w * inputDir.y,
-      };
+      const normalizedInput = this.normalize(inputDir);
+      clampedInput = this.constrainToCone(normalizedInput, axis, coneAngle);
     } else {
-      mixedDir = { ...approachDir };
+      clampedInput = { ...axis };
     }
 
-    // 归一化
-    const normalized = this.normalize(mixedDir);
+    // 2. 混合方向
+    const mixedDir: Vec2 = {
+      x: (1 - w) * approachDir.x + w * clampedInput.x,
+      y: (1 - w) * approachDir.y + w * clampedInput.y,
+    };
 
-    // 限制在锥角内
-    const coneAngle = this.config.madman.directionConeAngle;
-    const constrained = this.constrainToCone(
-      normalized,
-      approachDir,
-      coneAngle
-    );
+    // 3. 归一化并再次限制在锥角内
+    const normalized = this.normalize(mixedDir);
+    const constrained = this.constrainToCone(normalized, axis, coneAngle);
 
     // 应用速度
     const speed = baseSpeed * multiplier;
@@ -232,6 +235,46 @@ export class AnchorSystem {
       x: constrained.x * speed,
       y: constrained.y * speed,
     };
+  }
+
+  /**
+   * 计算瞄准信息（用于调试HUD）
+   * 返回原始角度、限制后角度、最终发射角度
+   */
+  calculateAimAngles(
+    approachDir: Vec2,
+    inputDir: Vec2 | null,
+    launchAxis?: Vec2
+  ): { rawAngle: number; clampedAngle: number; finalAngle: number } {
+    const w = this.config.madman.directionMixWeight;
+    const coneAngle = this.config.madman.directionConeAngle;
+    const axis = launchAxis || { x: 0, y: -1 };
+
+    // 原始输入角度
+    const rawAngle = inputDir && (inputDir.x !== 0 || inputDir.y !== 0)
+      ? Math.atan2(inputDir.y, inputDir.x) * 180 / Math.PI
+      : Math.atan2(axis.y, axis.x) * 180 / Math.PI;
+
+    // 限制后的输入角度
+    let clampedInput: Vec2;
+    if (inputDir && (inputDir.x !== 0 || inputDir.y !== 0)) {
+      const normalizedInput = this.normalize(inputDir);
+      clampedInput = this.constrainToCone(normalizedInput, axis, coneAngle);
+    } else {
+      clampedInput = { ...axis };
+    }
+    const clampedAngle = Math.atan2(clampedInput.y, clampedInput.x) * 180 / Math.PI;
+
+    // 混合并最终限制后的角度
+    const mixedDir: Vec2 = {
+      x: (1 - w) * approachDir.x + w * clampedInput.x,
+      y: (1 - w) * approachDir.y + w * clampedInput.y,
+    };
+    const normalized = this.normalize(mixedDir);
+    const constrained = this.constrainToCone(normalized, axis, coneAngle);
+    const finalAngle = Math.atan2(constrained.y, constrained.x) * 180 / Math.PI;
+
+    return { rawAngle, clampedAngle, finalAngle };
   }
 
   /**

@@ -710,11 +710,12 @@ export class GameScene extends Phaser.Scene {
   private launchFromAnchor() {
     if (!this.snappedAnchorId) return;
 
-    // Phase 2: 计算弹射速度
+    // Phase 2: 计算弹射速度（使用向上的发射轴）
     const launchVelocity = this.anchorSystem.calculateLaunchVelocity(
       this.incomingDashDir,
       this.aimDirection,
-      this.consumeAnchor
+      this.consumeAnchor,
+      { x: 0, y: -1 } // 发射轴向上
     );
 
     // Phase 2: 如果消耗锚点，则移除锚点
@@ -770,11 +771,12 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.snappedAnchorId) return;
 
-    // 计算弹射速度
+    // 计算弹射速度（使用向上的发射轴）
     const launchVelocity = this.anchorSystem.calculateLaunchVelocity(
       this.incomingDashDir,
       this.aimDirection,
-      this.consumeAnchor
+      this.consumeAnchor,
+      { x: 0, y: -1 }
     );
 
     // 计算轨迹点
@@ -788,14 +790,54 @@ export class GameScene extends Phaser.Scene {
       tuning.madman.trajectoryTimeStep
     );
 
-    // 渲染轨迹点
+    // 渲染轨迹点，在碰撞地面时停止
+    const groundY = 25; // 单位坐标
     for (const point of trajectoryPoints) {
+      // 检查是否碰到地面
+      if (point.y >= groundY) break;
+      
       const pixelPos = this.unitsToPixels(point.x, point.y);
       const dot = this.add.graphics();
       dot.fillStyle(0xffffff, 0.6);
       dot.fillCircle(pixelPos.x, pixelPos.y, 3);
       this.trajectoryDots.push(dot);
     }
+    
+    // 绘制锥角边缘（±70°从向上轴）
+    this.drawConeEdges();
+  }
+
+  private drawConeEdges() {
+    // 绘制两条锥角边缘线
+    if (!this.snappedAnchorId || !this.madman) return;
+    
+    const coneAngle = tuning.madman.coneHalfAngleDeg;
+    const lineLength = 200; // 像素
+    const startX = this.madman.x;
+    const startY = this.madman.y;
+    
+    // 向上轴 = -90°
+    const axisAngle = -90 * Math.PI / 180;
+    
+    // 左边缘
+    const leftAngle = axisAngle - coneAngle * Math.PI / 180;
+    const leftEndX = startX + Math.cos(leftAngle) * lineLength;
+    const leftEndY = startY + Math.sin(leftAngle) * lineLength;
+    
+    const leftLine = this.add.graphics();
+    leftLine.lineStyle(2, 0xffaa00, 0.5);
+    leftLine.lineBetween(startX, startY, leftEndX, leftEndY);
+    this.trajectoryDots.push(leftLine);
+    
+    // 右边缘
+    const rightAngle = axisAngle + coneAngle * Math.PI / 180;
+    const rightEndX = startX + Math.cos(rightAngle) * lineLength;
+    const rightEndY = startY + Math.sin(rightAngle) * lineLength;
+    
+    const rightLine = this.add.graphics();
+    rightLine.lineStyle(2, 0xffaa00, 0.5);
+    rightLine.lineBetween(startX, startY, rightEndX, rightEndY);
+    this.trajectoryDots.push(rightLine);
   }
 
   private clearTrajectoryPreview() {
@@ -848,28 +890,51 @@ export class GameScene extends Phaser.Scene {
   private updateDebugPanel() {
     const anchors = this.anchorSystem.getAnchors();
     
-    // Phase 2: 计算瞄准角度
-    let aimAngleDeg = 0;
-    let clampedAngleDeg = 0;
+    // Phase 2: 计算三个角度值
+    let rawAngle = 0;
+    let clampedAngle = 0;
+    let finalAngle = 0;
+    let launchSpeed = 0;
+    
     if (this.isSnapped) {
-      aimAngleDeg = Math.atan2(this.aimDirection.y, this.aimDirection.x) * 180 / Math.PI;
+      const angles = this.anchorSystem.calculateAimAngles(
+        this.incomingDashDir,
+        this.aimDirection,
+        { x: 0, y: -1 } // 发射轴向上
+      );
+      rawAngle = angles.rawAngle;
+      clampedAngle = angles.clampedAngle;
+      finalAngle = angles.finalAngle;
       
-      // 计算限制后的速度来获取实际角度
+      // 计算发射速度
       const launchVelocity = this.anchorSystem.calculateLaunchVelocity(
         this.incomingDashDir,
         this.aimDirection,
-        this.consumeAnchor
+        this.consumeAnchor,
+        { x: 0, y: -1 }
       );
-      clampedAngleDeg = Math.atan2(launchVelocity.y, launchVelocity.x) * 180 / Math.PI;
+      launchSpeed = Math.sqrt(
+        launchVelocity.x * launchVelocity.x + 
+        launchVelocity.y * launchVelocity.y
+      ) / tuning.world.pixelsPerUnit;
     }
+    
+    // 计算当前速度（用于发射后显示）
+    const body = this.madman.body as Phaser.Physics.Arcade.Body;
+    const currentSpeed = Math.sqrt(
+      body.velocity.x * body.velocity.x +
+      body.velocity.y * body.velocity.y
+    ) / tuning.world.pixelsPerUnit;
 
     const lines = [
       `锚点数: ${anchors.length}/${tuning.genius.maxAnchors}`,
       `冲刺冷却: ${this.dashCooldown.toFixed(2)}s`,
       `是否吸附: ${this.isSnapped ? '是' : '否'}`,
       `瞄准窗口: ${this.isSnapped ? this.aimWindowTimer.toFixed(2) : '-'}s`,
-      `瞄准角度: ${this.isSnapped ? aimAngleDeg.toFixed(1) + '°' : '-'}`,
-      `限制角度: ${this.isSnapped ? clampedAngleDeg.toFixed(1) + '°' : '-'}`,
+      `原始输入: ${this.isSnapped ? rawAngle.toFixed(1) + '°' : '-'}`,
+      `限制瞄准: ${this.isSnapped ? clampedAngle.toFixed(1) + '°' : '-'}`,
+      `最终发射: ${this.isSnapped ? finalAngle.toFixed(1) + '°' : '-'}`,
+      `发射速度: ${this.isSnapped ? launchSpeed.toFixed(1) + ' u/s' : currentSpeed > 1 ? currentSpeed.toFixed(1) + ' u/s' : '-'}`,
       `消耗锚点: ${this.consumeAnchor ? '是' : '否'}`,
       '',
       '操作:',

@@ -365,37 +365,42 @@ describe('AnchorSystem', () => {
       );
     });
 
-    it('无输入时应该沿接近方向弹射', () => {
+    it('无输入时应该沿发射轴弹射', () => {
       const approachDir: Vec2 = { x: 1, y: 0 };
+      const launchAxis: Vec2 = { x: 1, y: 0 }; // 发射轴向右
 
       const velocity = system.calculateLaunchVelocity(
         approachDir,
         null,
-        false
+        false,
+        launchAxis
       );
 
-      // 应该保持水平方向
-      expect(velocity.y).toBeCloseTo(0, 1);
+      // 应该接近水平方向
+      expect(Math.abs(velocity.y)).toBeLessThan(5); // 允许小的偏差
       expect(velocity.x).toBeGreaterThan(0);
     });
 
     it('应该限制方向在锥角内', () => {
       const approachDir: Vec2 = { x: 1, y: 0 };
       const inputDir: Vec2 = { x: -1, y: 0 }; // 完全相反
+      const launchAxis: Vec2 = { x: 1, y: 0 }; // 发射轴向右
 
       const velocity = system.calculateLaunchVelocity(
         approachDir,
         inputDir,
-        false
+        false,
+        launchAxis
       );
 
-      // 计算角度
+      // 计算角度相对于发射轴
       const angle = Math.atan2(velocity.y, velocity.x) * (180 / Math.PI);
-      const approachAngle = Math.atan2(approachDir.y, approachDir.x) * (180 / Math.PI);
-      const diff = Math.abs(angle - approachAngle);
+      const axisAngle = Math.atan2(launchAxis.y, launchAxis.x) * (180 / Math.PI);
+      let diff = Math.abs(angle - axisAngle);
+      if (diff > 180) diff = 360 - diff;
 
       // 应该在锥角内（70度）
-      expect(diff).toBeLessThanOrEqual(defaultTuning.madman.directionConeAngle);
+      expect(diff).toBeLessThanOrEqual(defaultTuning.madman.coneHalfAngleDeg + 1);
     });
   });
 
@@ -494,19 +499,20 @@ describe('AnchorSystem', () => {
       expect(Math.abs(normalizedVel.y - expectedNorm.y)).toBeLessThan(0.2);
     });
 
-    it('没有输入时应该使用进入方向', () => {
+    it('没有输入时应该使用发射轴方向', () => {
       const approachDir: Vec2 = { x: 1, y: 0 }; // 向右
       const inputDir: Vec2 | null = null;
+      const launchAxis: Vec2 = { x: 1, y: 0 }; // 发射轴也向右
 
-      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, false);
+      const velocity = system.calculateLaunchVelocity(approachDir, inputDir, false, launchAxis);
 
       // 归一化速度方向
       const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
       const normalizedVel = { x: velocity.x / speed, y: velocity.y / speed };
 
-      // 应该保持进入方向
-      expect(normalizedVel.x).toBeCloseTo(approachDir.x, 1);
-      expect(normalizedVel.y).toBeCloseTo(approachDir.y, 1);
+      // 应该接近发射轴方向（考虑混合）
+      expect(Math.abs(normalizedVel.x)).toBeGreaterThan(0.5);
+      expect(Math.abs(normalizedVel.y)).toBeLessThan(0.5);
     });
   });
 

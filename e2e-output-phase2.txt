@@ -1,0 +1,283 @@
+
+Running 7 tests using 1 worker
+
+(node:5429) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/7] [chromium] › e2e/phase2-evidence.spec.ts:28:3 › Phase 2 证据捕获 › P2-01: 轨迹预览可见
+[chromium] › e2e/phase2-evidence.spec.ts:28:3 › Phase 2 证据捕获 › P2-01: 轨迹预览可见
+P2-01 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.11669000000000002,
+  dashCooldown: 0.48331000000000013,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.48s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.12s\n' +
+    '瞄准角度: -63.4°\n' +
+    '限制角度: -38.8°\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  aimAngleDeg: -63.43494882292201,
+  clampedAngleDeg: -38.76388079231818,
+  launchSpeed: 15.999999999999998,
+  consumeAnchor: false,
+  trajectoryPointsLength: 20
+}
+
+P2-01 MD5: a030ee649a022297ec8e0fc158df8a21
+
+[2/7] [chromium] › e2e/phase2-evidence.spec.ts:70:3 › Phase 2 证据捕获 › P2-02: 锥角限制
+[chromium] › e2e/phase2-evidence.spec.ts:70:3 › Phase 2 证据捕获 › P2-02: 锥角限制
+P2-02 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.13335999999999998,
+  dashCooldown: 0.46664000000000017,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.47s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.13s\n' +
+    '瞄准角度: 0.0°\n' +
+    '限制角度: 0.0°\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  aimAngleDeg: 0,
+  clampedAngleDeg: 0,
+  launchSpeed: 16,
+  consumeAnchor: false,
+  trajectoryPointsLength: 20
+}
+
+P2-02 MD5: 29f61ae57f2510c56b06ab7fc95a5d18
+
+[3/7] [chromium] › e2e/phase2-evidence.spec.ts:112:3 › Phase 2 证据捕获 › P2-03: 保留锚点发射
+[chromium] › e2e/phase2-evidence.spec.ts:112:3 › Phase 2 证据捕获 › P2-03: 保留锚点发射
+P2-03 result: {
+  beforeAnchors: 1,
+  afterAnchors: 1,
+  afterState: {
+    isSnapped: false,
+    snappedAnchorId: null,
+    aimWindowTimer: 0.28339,
+    dashCooldown: 0.18324999999999994,
+    madmanX: 880.8,
+    madmanY: 739.2,
+    madmanVelX: 0,
+    madmanVelY: -350.9947507009761,
+    anchorsCount: 1,
+    badgeVisible: false,
+    badgeTexture: 'snap_badge_snapped_zh_m',
+    inUseBadgeVisible: false,
+    hudText: '锚点数: 1/2\n' +
+      '冲刺冷却: 0.18s\n' +
+      '是否吸附: 否\n' +
+      '瞄准窗口: -s\n' +
+      '瞄准角度: -\n' +
+      '限制角度: -\n' +
+      '消耗锚点: 否\n' +
+      '\n' +
+      '操作:\n' +
+      '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+      '  疯子: 方向键移动, Shift 冲刺\n' +
+      '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+      '  按 T 键: 打开调参面板\n' +
+      '\n' +
+      'Phase 2 范围:\n' +
+      '  ✅ 锚点放置 + FIFO + 锁定\n' +
+      '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+      '  ✅ 方向瞄准 + 轨迹预览\n' +
+      '  ✅ 弹射发射 + 保留/消耗',
+    aimAngleDeg: 0,
+    clampedAngleDeg: 0,
+    launchSpeed: 0,
+    consumeAnchor: false,
+    trajectoryPointsLength: 0
+  }
+}
+
+P2-03 MD5: fda82fc51bfdb9be730387b72ec49c3e
+
+[4/7] [chromium] › e2e/phase2-evidence.spec.ts:168:3 › Phase 2 证据捕获 › P2-04: 消耗锚点发射
+[chromium] › e2e/phase2-evidence.spec.ts:168:3 › Phase 2 证据捕获 › P2-04: 消耗锚点发射
+P2-04 result: {
+  beforeAnchors: 1,
+  afterAnchors: 0,
+  afterState: {
+    isSnapped: false,
+    snappedAnchorId: null,
+    aimWindowTimer: 0.28339,
+    dashCooldown: 0.18324999999999994,
+    madmanX: 880.8,
+    madmanY: 739.2,
+    madmanVelX: 0,
+    madmanVelY: -500.09816344631736,
+    anchorsCount: 0,
+    badgeVisible: false,
+    badgeTexture: 'snap_badge_snapped_zh_m',
+    inUseBadgeVisible: false,
+    hudText: '锚点数: 0/2\n' +
+      '冲刺冷却: 0.18s\n' +
+      '是否吸附: 否\n' +
+      '瞄准窗口: -s\n' +
+      '瞄准角度: -\n' +
+      '限制角度: -\n' +
+      '消耗锚点: 否\n' +
+      '\n' +
+      '操作:\n' +
+      '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+      '  疯子: 方向键移动, Shift 冲刺\n' +
+      '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+      '  按 T 键: 打开调参面板\n' +
+      '\n' +
+      'Phase 2 范围:\n' +
+      '  ✅ 锚点放置 + FIFO + 锁定\n' +
+      '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+      '  ✅ 方向瞄准 + 轨迹预览\n' +
+      '  ✅ 弹射发射 + 保留/消耗',
+    aimAngleDeg: 0,
+    clampedAngleDeg: 0,
+    launchSpeed: 0,
+    consumeAnchor: false,
+    trajectoryPointsLength: 0
+  }
+}
+
+P2-04 MD5: 8d832ccb2b072f4ca6ec007d91887001
+
+[5/7] [chromium] › e2e/phase2-evidence.spec.ts:224:3 › Phase 2 证据捕获 › P2-05: 悬停点修复和视觉改进
+[chromium] › e2e/phase2-evidence.spec.ts:224:3 › Phase 2 证据捕获 › P2-05: 悬停点修复和视觉改进
+P2-05 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.11669000000000004,
+  dashCooldown: 0.48331000000000013,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.48s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.12s\n' +
+    '瞄准角度: -90.0°\n' +
+    '限制角度: -56.3°\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  aimAngleDeg: -90,
+  clampedAngleDeg: -56.309932474020215,
+  launchSpeed: 15.999999999999998,
+  consumeAnchor: false,
+  trajectoryPointsLength: 20
+}
+
+P2-05 MD5: 9c517f6b91d2333ad34fd9fc51a5e28b
+
+[6/7] [chromium] › e2e/phase2-evidence.spec.ts:263:3 › Phase 2 证据捕获 › P2-06: 「已吸附」真实徽标
+[chromium] › e2e/phase2-evidence.spec.ts:263:3 › Phase 2 证据捕获 › P2-06: 「已吸附」真实徽标
+P2-06 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.11668999999999999,
+  dashCooldown: 0.4833100000000002,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.48s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.12s\n' +
+    '瞄准角度: -90.0°\n' +
+    '限制角度: -56.3°\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  aimAngleDeg: -90,
+  clampedAngleDeg: -56.309932474020215,
+  launchSpeed: 15.999999999999998,
+  consumeAnchor: false,
+  trajectoryPointsLength: 20
+}
+
+P2-06 MD5: 9c517f6b91d2333ad34fd9fc51a5e28b
+
+[7/7] [chromium] › e2e/phase2-evidence.spec.ts:298:3 › Phase 2 证据捕获 › P2-07: 粗吸附半径环
+[chromium] › e2e/phase2-evidence.spec.ts:298:3 › Phase 2 证据捕获 › P2-07: 粗吸附半径环
+P2-07 ring info: {
+  textureKey: 'snap_ring_bold_m',
+  scale: 0.5423728813559322,
+  displayRadius: 64
+}
+
+P2-07 MD5: 8b742865678b4dc6455b3bf1357de0af
+
+  7 passed (29.1s)

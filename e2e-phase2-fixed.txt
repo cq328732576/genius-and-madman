@@ -1,0 +1,424 @@
+
+Running 7 tests using 1 worker
+
+(node:5943) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/7] [chromium] › e2e/phase2-evidence.spec.ts:28:3 › Phase 2 证据捕获（修订版） › P2-01: 轨迹预览可见
+[chromium] › e2e/phase2-evidence.spec.ts:28:3 › Phase 2 证据捕获（修订版） › P2-01: 轨迹预览可见
+P2-01 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.13335999999999998,
+  dashCooldown: 0.46664000000000017,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.47s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.13s\n' +
+    '原始输入: -63.4°\n' +
+    '限制瞄准: -63.4°\n' +
+    '最终发射: -38.8°\n' +
+    '发射速度: 0.5 u/s\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  rawAngle: -63.43494882292201,
+  clampedAngle: -63.43494882292201,
+  finalAngle: -38.76388079231818,
+  launchSpeed: 16,
+  consumeAnchor: false,
+  trajectoryPointsLength: 22
+}
+
+P2-01 MD5: 66e1d13769433bd1cb738bdb566e05d5
+
+[2/7] [chromium] › e2e/phase2-evidence.spec.ts:70:3 › Phase 2 证据捕获（修订版） › P2-02: 锥角限制（输入超过70°）
+[chromium] › e2e/phase2-evidence.spec.ts:70:3 › Phase 2 证据捕获（修订版） › P2-02: 锥角限制（输入超过70°）
+P2-02 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.11669000000000002,
+  dashCooldown: 0.48331000000000013,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.48s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.12s\n' +
+    '原始输入: 0.0°\n' +
+    '限制瞄准: -160.0°\n' +
+    '最终发射: -128.6°\n' +
+    '发射速度: 0.5 u/s\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  rawAngle: 0,
+  clampedAngle: -160,
+  finalAngle: -128.59947415757168,
+  launchSpeed: 16,
+  consumeAnchor: false,
+  trajectoryPointsLength: 22
+}
+
+P2-02 MD5: addc3a105fc843bb2fd638c9645ea7df
+
+[3/7] [chromium] › e2e/phase2-evidence.spec.ts:115:3 › Phase 2 证据捕获（修订版） › P2-03: 保留锚点发射（发射后捕获）
+[chromium] › e2e/phase2-evidence.spec.ts:115:3 › Phase 2 证据捕获（修订版） › P2-03: 保留锚点发射（发射后捕获）
+P2-03 result: {
+  afterAnchors: 1,
+  state: {
+    isSnapped: false,
+    snappedAnchorId: null,
+    aimWindowTimer: 0.28339,
+    dashCooldown: 0.06656999999999996,
+    madmanX: 880.8,
+    madmanY: 734.322476377206,
+    madmanVelX: 0,
+    madmanVelY: -292.6514173676429,
+    anchorsCount: 1,
+    badgeVisible: false,
+    badgeTexture: 'snap_badge_snapped_zh_m',
+    inUseBadgeVisible: false,
+    hudText: '锚点数: 1/2\n' +
+      '冲刺冷却: 0.07s\n' +
+      '是否吸附: 否\n' +
+      '瞄准窗口: -s\n' +
+      '原始输入: -\n' +
+      '限制瞄准: -\n' +
+      '最终发射: -\n' +
+      '发射速度: 9.1 u/s\n' +
+      '消耗锚点: 否\n' +
+      '\n' +
+      '操作:\n' +
+      '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+      '  疯子: 方向键移动, Shift 冲刺\n' +
+      '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+      '  按 T 键: 打开调参面板\n' +
+      '\n' +
+      'Phase 2 范围:\n' +
+      '  ✅ 锚点放置 + FIFO + 锁定\n' +
+      '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+      '  ✅ 方向瞄准 + 轨迹预览\n' +
+      '  ✅ 弹射发射 + 保留/消耗',
+    rawAngle: 0,
+    clampedAngle: 0,
+    finalAngle: 0,
+    launchSpeed: 0,
+    consumeAnchor: false,
+    trajectoryPointsLength: 0
+  }
+}
+
+P2-03 launch speed: 9.145356792738841 u/s
+
+  1) [chromium] › e2e/phase2-evidence.spec.ts:115:3 › Phase 2 证据捕获（修订版） › P2-03: 保留锚点发射（发射后捕获） ─────
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 15.5
+    Received:   9.145356792738841
+
+      159 |     
+      160 |     console.log('P2-03 launch speed:', speed, 'u/s');
+    > 161 |     expect(speed).toBeGreaterThan(15.5);
+          |                   ^
+      162 |     expect(speed).toBeLessThan(16.5);
+      163 |     
+      164 |     // 验证疯子在空中
+        at /agent/repos/genius-and-madman/e2e/phase2-evidence.spec.ts:161:19
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-03-保留锚点发射（发射后捕获）-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-03-保留锚点发射（发射后捕获）-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-03-保留锚点发射（发射后捕获）-chromium/error-context.md
+
+
+(node:6079) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[4/7] [chromium] › e2e/phase2-evidence.spec.ts:181:3 › Phase 2 证据捕获（修订版） › P2-04: 消耗锚点发射（发射后捕获）
+[chromium] › e2e/phase2-evidence.spec.ts:181:3 › Phase 2 证据捕获（修订版） › P2-04: 消耗锚点发射（发射后捕获）
+P2-04 result: {
+  afterAnchors: 0,
+  state: {
+    isSnapped: false,
+    snappedAnchorId: null,
+    aimWindowTimer: 0.28339,
+    dashCooldown: 0.06656999999999996,
+    madmanX: 880.8,
+    madmanY: 731.837419498117,
+    madmanVelX: 0,
+    madmanVelY: -441.75483011298417,
+    anchorsCount: 0,
+    badgeVisible: false,
+    badgeTexture: 'snap_badge_snapped_zh_m',
+    inUseBadgeVisible: false,
+    hudText: '锚点数: 0/2\n' +
+      '冲刺冷却: 0.07s\n' +
+      '是否吸附: 否\n' +
+      '瞄准窗口: -s\n' +
+      '原始输入: -\n' +
+      '限制瞄准: -\n' +
+      '最终发射: -\n' +
+      '发射速度: 13.8 u/s\n' +
+      '消耗锚点: 否\n' +
+      '\n' +
+      '操作:\n' +
+      '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+      '  疯子: 方向键移动, Shift 冲刺\n' +
+      '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+      '  按 T 键: 打开调参面板\n' +
+      '\n' +
+      'Phase 2 范围:\n' +
+      '  ✅ 锚点放置 + FIFO + 锁定\n' +
+      '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+      '  ✅ 方向瞄准 + 轨迹预览\n' +
+      '  ✅ 弹射发射 + 保留/消耗',
+    rawAngle: 0,
+    clampedAngle: 0,
+    finalAngle: 0,
+    launchSpeed: 0,
+    consumeAnchor: false,
+    trajectoryPointsLength: 0
+  }
+}
+
+P2-04 launch speed: 13.804838441030755 u/s
+
+  2) [chromium] › e2e/phase2-evidence.spec.ts:181:3 › Phase 2 证据捕获（修订版） › P2-04: 消耗锚点发射（发射后捕获） ─────
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 21
+    Received:   13.804838441030755
+
+      225 |     
+      226 |     console.log('P2-04 launch speed:', speed, 'u/s');
+    > 227 |     expect(speed).toBeGreaterThan(21.0);
+          |                   ^
+      228 |     expect(speed).toBeLessThan(22.5);
+      229 |     
+      230 |     // 验证疯子在空中
+        at /agent/repos/genius-and-madman/e2e/phase2-evidence.spec.ts:227:19
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-04-消耗锚点发射（发射后捕获）-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-04-消耗锚点发射（发射后捕获）-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-04-消耗锚点发射（发射后捕获）-chromium/error-context.md
+
+
+(node:6177) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[5/7] [chromium] › e2e/phase2-evidence.spec.ts:247:3 › Phase 2 证据捕获（修订版） › P2-05: 悬停点修复（脚完全在地面上方）
+[chromium] › e2e/phase2-evidence.spec.ts:247:3 › Phase 2 证据捕获（修订版） › P2-05: 悬停点修复（脚完全在地面上方）
+P2-05 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.10002000000000001,
+  dashCooldown: 0.49998000000000015,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.50s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.10s\n' +
+    '原始输入: -90.0°\n' +
+    '限制瞄准: -90.0°\n' +
+    '最终发射: -56.3°\n' +
+    '发射速度: 0.5 u/s\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  rawAngle: -90,
+  clampedAngle: -90,
+  finalAngle: -56.309932474020215,
+  launchSpeed: 15.999999999999998,
+  consumeAnchor: false,
+  trajectoryPointsLength: 22
+}
+
+P2-05 madman bottom: 739.2 ground top: 736
+
+  3) [chromium] › e2e/phase2-evidence.spec.ts:247:3 › Phase 2 证据捕获（修订版） › P2-05: 悬停点修复（脚完全在地面上方） ───
+
+    Error: expect(received).toBeLessThan(expected)
+
+    Expected: < 736
+    Received:   739.2
+
+      274 |     
+      275 |     console.log('P2-05 madman bottom:', madmanBottom, 'ground top:', groundTop);
+    > 276 |     expect(madmanBottom).toBeLessThan(groundTop);
+          |                          ^
+      277 |
+      278 |     // 截图
+      279 |     const screenshotPath = path.join(evidenceDir, 'P2-05-hover-fix.png');
+        at /agent/repos/genius-and-madman/e2e/phase2-evidence.spec.ts:276:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-05-悬停点修复（脚完全在地面上方）-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-05-悬停点修复（脚完全在地面上方）-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-05-悬停点修复（脚完全在地面上方）-chromium/error-context.md
+
+
+(node:6271) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[6/7] [chromium] › e2e/phase2-evidence.spec.ts:289:3 › Phase 2 证据捕获（修订版） › P2-06: 「已吸附」真实徽标
+[chromium] › e2e/phase2-evidence.spec.ts:289:3 › Phase 2 证据捕获（修订版） › P2-06: 「已吸附」真实徽标
+P2-06 state: {
+  isSnapped: true,
+  snappedAnchorId: 'anchor_1',
+  aimWindowTimer: 0.11669000000000002,
+  dashCooldown: 0.48331000000000013,
+  madmanX: 880.8,
+  madmanY: 739.2,
+  madmanVelX: 0,
+  madmanVelY: 0,
+  anchorsCount: 1,
+  badgeVisible: true,
+  badgeTexture: 'snap_badge_snapped_zh_m',
+  inUseBadgeVisible: false,
+  hudText: '锚点数: 1/2\n' +
+    '冲刺冷却: 0.48s\n' +
+    '是否吸附: 是\n' +
+    '瞄准窗口: 0.12s\n' +
+    '原始输入: -116.6°\n' +
+    '限制瞄准: -116.6°\n' +
+    '最终发射: -76.2°\n' +
+    '发射速度: 0.5 u/s\n' +
+    '消耗锚点: 否\n' +
+    '\n' +
+    '操作:\n' +
+    '  天才: WASD 移动, 鼠标点击放置锚点\n' +
+    '  疯子: 方向键移动, Shift 冲刺\n' +
+    '  吸附时: 方向键瞄准, C键消耗锚点\n' +
+    '  按 T 键: 打开调参面板\n' +
+    '\n' +
+    'Phase 2 范围:\n' +
+    '  ✅ 锚点放置 + FIFO + 锁定\n' +
+    '  ✅ 冲刺吸附 + 瞄准窗口\n' +
+    '  ✅ 方向瞄准 + 轨迹预览\n' +
+    '  ✅ 弹射发射 + 保留/消耗',
+  rawAngle: -116.56505117707799,
+  clampedAngle: -116.56505117707799,
+  finalAngle: -76.21445902405492,
+  launchSpeed: 15.999999999999998,
+  consumeAnchor: false,
+  trajectoryPointsLength: 22
+}
+
+P2-06 MD5: 9e03b804e24f7b35a57f1a5222840115
+
+[7/7] [chromium] › e2e/phase2-evidence.spec.ts:328:3 › Phase 2 证据捕获（修订版） › P2-07: 粗吸附半径环（疯子接近时）
+[chromium] › e2e/phase2-evidence.spec.ts:328:3 › Phase 2 证据捕获（修订版） › P2-07: 粗吸附半径环（疯子接近时）
+P2-07 ring info: {
+  textureKey: 'snap_ring_bold_m',
+  scale: 0.5423728813559322,
+  displayRadius: 64,
+  displayWidth: 138.84745762711864
+}
+
+  4) [chromium] › e2e/phase2-evidence.spec.ts:328:3 › Phase 2 证据捕获（修订版） › P2-07: 粗吸附半径环（疯子接近时） ─────
+
+    Error: expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 128
+    Received: 138.84745762711864
+
+    Expected precision:    5
+    Expected difference: < 0.000005
+    Received difference:   10.847457627118644
+
+      364 |     expect(ringInfo!.textureKey).toMatch(/snap_ring_bold_/);
+      365 |     expect(ringInfo!.displayRadius).toBeCloseTo(64, 1); // 2.0u * 32px/u = 64px
+    > 366 |     expect(ringInfo!.displayWidth).toBeCloseTo(128, 5); // 256 * scale ≈ 128
+          |                                    ^
+      367 |
+      368 |     // 冻结并截图
+      369 |     await page.evaluate(() => window.__TEST_API__.freeze());
+        at /agent/repos/genius-and-madman/e2e/phase2-evidence.spec.ts:366:36
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-07-粗吸附半径环（疯子接近时）-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-07-粗吸附半径环（疯子接近时）-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/phase2-evidence-Phase-2-证据捕获（修订版）-P2-07-粗吸附半径环（疯子接近时）-chromium/error-context.md
+
+
+  4 failed
+    [chromium] › e2e/phase2-evidence.spec.ts:115:3 › Phase 2 证据捕获（修订版） › P2-03: 保留锚点发射（发射后捕获） ──────
+    [chromium] › e2e/phase2-evidence.spec.ts:181:3 › Phase 2 证据捕获（修订版） › P2-04: 消耗锚点发射（发射后捕获） ──────
+    [chromium] › e2e/phase2-evidence.spec.ts:247:3 › Phase 2 证据捕获（修订版） › P2-05: 悬停点修复（脚完全在地面上方） ────
+    [chromium] › e2e/phase2-evidence.spec.ts:328:3 › Phase 2 证据捕获（修订版） › P2-07: 粗吸附半径环（疯子接近时） ──────
+  3 passed (30.5s)
