@@ -110,18 +110,13 @@ window.__TEST_API__ = {
     if (!scene) return;
     const dt = 16.67; // 60 FPS (毫秒)
     const steps = Math.ceil(ms / dt);
+    // 使用Phaser自己的更新序列
+    let t = scene.time.now;
     for (let i = 0; i < steps; i++) {
-      // 使用world.update()而不是step()
-      scene.physics.world.update(0, dt);
-      // 手动同步sprite位置 = body中心
-      if (scene.genius.body) {
-        scene.genius.x = scene.genius.body.center.x;
-        scene.genius.y = scene.genius.body.center.y;
-      }
-      if (scene.madman.body) {
-        scene.madman.x = scene.madman.body.center.x;
-        scene.madman.y = scene.madman.body.center.y;
-      }
+      t += dt;
+      scene.update(t, dt);
+      scene.physics.world.update(t, dt);
+      scene.physics.world.postUpdate();
     }
   },
   // 触发冲刺（模拟按键并步进）

@@ -19,40 +19,35 @@ test.describe('Phase 2 发射物理验证', () => {
   test('校准：自由落体0.5s应下落约62.5px', async ({ page }) => {
     // 理论：g = 500 px/s², Δy = 0.5*g*t² = 0.5*500*0.25 = 62.5px
     // 允许±10%: 56-69px
+    // 地面在y=768-16=752，放在y=300（距地面452px）
     
     const result = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
-      
-      // 将madman放在空中，关闭重力
-      scene.madman.setPosition(400, 300);
       const body = scene.madman.body;
-      body.setVelocity(0, 0);
-      body.allowGravity = false;
       
-      // 推进一帧让位置稳定
-      window.__TEST_API__.step(16.67);
+      // 将madman放在离地面至少200px的空中，零速度，开启重力
+      scene.madman.setPosition(400, 300);
+      body.setVelocity(0, 0);
+      body.allowGravity = true;
       
       const startY = scene.madman.y;
       
-      // 开启重力，自由落体0.5s (30帧)
-      body.allowGravity = true;
+      // 自由落体0.5s (30帧)
       for (let i = 0; i < 30; i++) {
         window.__TEST_API__.step(16.67);
       }
       
       const endY = scene.madman.y;
-      const bodyY = body.y;
       const bodyVelY = body.velocity.y;
-      return { startY, endY, deltaY: endY - startY, bodyY, bodyVelY };
+      return { startY, endY, deltaY: endY - startY, bodyVelY };
     });
     
     console.log('自由落体校准:');
     console.log('  起始y:', result.startY.toFixed(1));
     console.log('  结束y:', result.endY.toFixed(1));
     console.log('  下落Δy:', result.deltaY.toFixed(1), 'px');
-    console.log('  body.y:', result.bodyY.toFixed(1));
-    console.log('  body.velocity.y:', result.bodyVelY.toFixed(1));
-    console.log('  理论:', 62.5, 'px');
+    console.log('  最终vy:', result.bodyVelY.toFixed(1), 'px/s');
+    console.log('  理论Δy:', 62.5, 'px');
     console.log('  允许范围:', '56-69 px');
     
     // 断言Δy在56-69px范围内（±10%）

@@ -579,14 +579,14 @@ export class GameScene extends Phaser.Scene {
     if (isAirborne) {
       this.launchAirTime += dt;
       
-      // 落地检测：给予0.1s延迟让疯子先离开地面，之后才检测落地
-      if (this.launchAirTime > 100 && (body.blocked.down || body.touching.down)) {
+      // 落地检测：给予延迟让疯子先离开地面，之后才检测落地
+      if (this.launchAirTime > tuning.madman.launchLandingGraceS && 
+          (body.blocked.down || body.touching.down)) {
         this.launchAirTime = -1;
       }
       
-      // 在发射后的前0.5s，完全由发射速度控制，不接受输入
-      // 之后允许有限的空中控制
-      if (this.launchAirTime < 500) {
+      // 发射后输入锁定期间，完全由发射速度控制，不接受输入
+      if (this.launchAirTime < tuning.madman.launchInputLockS) {
         return; // 完全跳过移动控制，保持发射动量
       }
     }

@@ -55,6 +55,8 @@ export interface TuningConfig {
     coneHalfAngleDeg: number;      // 锥角半角：70°
     trajectoryDotCount: number;    // 轨迹预览点数：20
     trajectoryTimeStep: number;    // 轨迹时间步长：0.05 秒
+    launchLandingGraceS: number;   // 发射后落地检测延迟：0.1 秒
+    launchInputLockS: number;      // 发射后输入锁定时间：0.5 秒
   };
 
   // 重力翻转（本阶段不实现）
@@ -111,6 +113,8 @@ export const defaultTuning: TuningConfig = {
     coneHalfAngleDeg: 70,
     trajectoryDotCount: 20,
     trajectoryTimeStep: 0.05,
+    launchLandingGraceS: 0.1,
+    launchInputLockS: 0.5,
   },
   gravityFlip: {
     duration: 1.50,
