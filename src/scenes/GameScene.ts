@@ -38,6 +38,7 @@ export class GameScene extends Phaser.Scene {
   private cKeyDown = false; // Phase 2: C键状态
   private lastLaunchSpeed = 0; // Phase 2: 最后一次发射的速度（u/s）
   private launchAirTime = -1; // Phase 2: 发射后空中时间（-1表示未发射，≥0表示发射后）
+  private lastLaunch = { vx: 0, vy: 0, x: 0, y: 0 }; // Phase 2: 最后一次发射的瞬时状态（px/s, px）
 
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -619,13 +620,18 @@ export class GameScene extends Phaser.Scene {
     this.clearTrajectoryPreview();
 
     // 正常移动
+    // Phase 2: 发射后空中时不清零vx，保持动量
+    const isAirborneLaunch = this.launchAirTime >= 0;
+    
     if (this.cursors.left!.isDown) {
       body.setVelocityX(-speed);
     } else if (this.cursors.right!.isDown) {
       body.setVelocityX(speed);
-    } else {
+    } else if (!isAirborneLaunch) {
+      // 只在非空中发射状态时清零vx
       body.setVelocityX(0);
     }
+    // 空中发射且无按键时：保持vx，不修改
 
     // 冲刺（边缘检测：仅在按下时触发，不在持续按住时）
     const shiftPressed = this.shiftKey.isDown && !this.prevShift;
@@ -756,12 +762,19 @@ export class GameScene extends Phaser.Scene {
     const ppu = tuning.world.pixelsPerUnit;
     const vxPx = launchVelocity.x * ppu;
     const vyPx = launchVelocity.y * ppu;
-    console.log('[Launch] velocity u/s:', launchVelocity, 'px/s:', {x: vxPx, y: vyPx});
     this.madman.setVelocity(vxPx, vyPx);
 
     // 恢复重力
     const body = this.madman.body as Phaser.Physics.Arcade.Body;
     body.allowGravity = true;
+
+    // 记录发射瞬时状态（供测试使用）
+    this.lastLaunch = {
+      vx: vxPx,
+      vy: vyPx,
+      x: this.madman.x,
+      y: this.madman.y
+    };
 
     this.isSnapped = false;
     this.snappedAnchorId = null;

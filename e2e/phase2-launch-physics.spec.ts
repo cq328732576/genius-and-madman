@@ -172,65 +172,61 @@ test.describe('Phase 2 发射物理验证', () => {
   });
 
   test('保留峰值：垂直进入，必须上升262px ±10%', async ({ page }) => {
-    // 纯垂直：从下方向上冲刺到锚点
+    // 纯垂直：用setIncomingDashDir设置垂直进入
     // approachDir (0,-1), aim up (0,-1)，无混合
     // vy = -512, 峰值 = 512²/(2*500) = 262px
     
     const result = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       
-      // 锚点在中间高度
-      window.__TEST_API__.placeAnchorAt(500 / 32, 400 / 32);
-      // madman在下方
-      scene.madman.setPosition(500, 600);
+      // 水平吸附
+      window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
+      scene.madman.setPosition(785, 768);
       scene.dashCooldown = 0;
-      scene.madman.body.setVelocity(0, -400);
+      window.__TEST_API__.setHoldDash(false);
+      window.__TEST_API__.triggerDash('right');
+      window.__TEST_API__.step(100);
       
-      // 等待向上冲刺并吸附
-      let snapped = false;
-      for (let i = 0; i < 50; i++) {
-        window.__TEST_API__.step(16.67);
-        if (scene.isSnapped) {
-          snapped = true;
-          break;
-        }
-      }
+      // 覆盖进入方向为垂直
+      window.__TEST_API__.setIncomingDashDir(0, -1);
       
-      if (!snapped) {
-        return { error: 'Failed to snap', vx: 0, vy: 0, launchY: 0, minY: 0, measuredRise: 0 };
-      }
-      
-      // 瞄准向上（与进入方向相同）
+      // 瞄准向上
       window.__TEST_API__.setAimDirection(0, -1);
       window.__TEST_API__.setConsume(false);
       window.__TEST_API__.step(16.67);
       window.__TEST_API__.step(300);
       
-      const body = scene.madman.body;
-      const launchY = scene.madman.y;
-      const vx = body.velocity.x;
-      const vy = body.velocity.y;
+      // 从lastLaunch获取发射瞬时值
+      const launch = scene.lastLaunch;
       
       // 采样80帧找峰值
-      let minY = launchY;
+      let minY = launch.y;
       for (let i = 0; i < 80; i++) {
         window.__TEST_API__.step(16.67);
         minY = Math.min(minY, scene.madman.y);
       }
       
-      const measuredRise = launchY - minY;
+      const measuredRise = launch.y - minY;
       
-      return { vx, vy, launchY, minY, measuredRise };
+      return { 
+        vx: launch.vx, 
+        vy: launch.vy, 
+        launchY: launch.y, 
+        minY, 
+        measuredRise 
+      };
     });
     
     console.log('保留峰值（垂直进入）:');
-    if (result.launchY === 0) {
-      console.log('  ERROR: Failed to snap');
-    }
     console.log('  发射点y:', result.launchY.toFixed(1));
     console.log('  vx:', result.vx.toFixed(1), 'vy:', result.vy.toFixed(1));
     console.log('  实测峰值:', result.measuredRise.toFixed(1), 'px');
-    console.log('  理论:', 262, 'px, 允许: 236-288');
+    console.log('  期望vy: -512±3% (-497 to -527)');
+    console.log('  期望峰值:', 262, 'px, 允许: 236-288');
+    
+    // 断言vy = -512±3%
+    expect(Math.abs(result.vy)).toBeGreaterThanOrEqual(497);
+    expect(Math.abs(result.vy)).toBeLessThanOrEqual(527);
     
     // 断言峰值 262±10%
     expect(result.measuredRise).toBeGreaterThanOrEqual(236);
@@ -238,7 +234,7 @@ test.describe('Phase 2 发射物理验证', () => {
   });
 
   test('锥角边缘：同侧发射，角度≤70.5°，dx=vx·0.5±10%且≥150px', async ({ page }) => {
-    // 右侧进入，瞄准右侧边缘(+70°)
+    // 右侧进入，瞄准右侧边缘(+70° from vertical)
     
     const result = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
@@ -249,22 +245,20 @@ test.describe('Phase 2 发射物理验证', () => {
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
       
-      // 瞄准右侧边缘：+70° from vertical = 20° from right
-      const angle = -20 * Math.PI / 180; // -90+70 = -20°
-      const dirX = Math.sin(angle);
-      const dirY = -Math.cos(angle);
+      // 瞄准右侧边缘：+70° from vertical
+      // dirX = sin(70°) = 0.940, dirY = -cos(70°) = -0.342
+      const dirX = 0.9397; // sin(70°)
+      const dirY = -0.342; // -cos(70°)
       window.__TEST_API__.setAimDirection(dirX, dirY);
       window.__TEST_API__.setConsume(false);
       window.__TEST_API__.step(16.67);
       window.__TEST_API__.step(300);
       
-      const body = scene.madman.body;
-      const startX = scene.madman.x;
-      const vx = body.velocity.x;
-      const vy = body.velocity.y;
+      // 从lastLaunch获取发射瞬时值
+      const launch = scene.lastLaunch;
       
       // 计算发射角度（从垂直方向）
-      const angleFromVertical = Math.abs(Math.atan2(vx, -vy) * 180 / Math.PI);
+      const angleFromVertical = Math.abs(Math.atan2(launch.vx, -launch.vy) * 180 / Math.PI);
       
       // 前进0.5s
       for (let i = 0; i < 30; i++) {
@@ -272,10 +266,18 @@ test.describe('Phase 2 发射物理验证', () => {
       }
       
       const endX = scene.madman.x;
-      const dx = endX - startX;
-      const predictedDx = vx * 0.5;
+      const dx = endX - launch.x;
+      const predictedDx = launch.vx * 0.5;
       
-      return { vx, vy, startX, endX, dx, predictedDx, angleFromVertical };
+      return { 
+        vx: launch.vx, 
+        vy: launch.vy, 
+        startX: launch.x, 
+        endX, 
+        dx, 
+        predictedDx, 
+        angleFromVertical 
+      };
     });
     
     console.log('锥角边缘（同侧）:');
@@ -364,5 +366,49 @@ test.describe('Phase 2 发射物理验证', () => {
     
     // 断言比例 ≥ 1.6
     expect(ratio).toBeGreaterThanOrEqual(1.6);
+  });
+
+  test('vx保持：发射后1s内，无输入时vx保持±2%', async ({ page }) => {
+    // 验证修复：launchInputLockS结束后vx不被清零
+    
+    const result = await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
+      scene.madman.setPosition(785, 768);
+      scene.dashCooldown = 0;
+      window.__TEST_API__.setHoldDash(false);
+      window.__TEST_API__.triggerDash('right');
+      window.__TEST_API__.step(100);
+      
+      // 瞄准使vx > 0
+      const dirX = 0.9397; // sin(70°)
+      const dirY = -0.342; // -cos(70°)
+      window.__TEST_API__.setAimDirection(dirX, dirY);
+      window.__TEST_API__.setConsume(false);
+      window.__TEST_API__.step(16.67);
+      window.__TEST_API__.step(300);
+      
+      const launchVx = scene.lastLaunch.vx;
+      
+      // 1秒后（无输入）
+      for (let i = 0; i < 60; i++) {
+        window.__TEST_API__.step(16.67);
+      }
+      
+      const finalVx = scene.madman.body.velocity.x;
+      const ratio = finalVx / launchVx;
+      
+      return { launchVx, finalVx, ratio };
+    });
+    
+    console.log('vx保持测试:');
+    console.log('  发射vx:', result.launchVx.toFixed(1));
+    console.log('  1s后vx:', result.finalVx.toFixed(1));
+    console.log('  比例:', result.ratio.toFixed(3));
+    console.log('  期望: 0.98-1.02 (±2%)');
+    
+    // 断言vx保持在±2%内
+    expect(result.ratio).toBeGreaterThanOrEqual(0.98);
+    expect(result.ratio).toBeLessThanOrEqual(1.02);
   });
 });

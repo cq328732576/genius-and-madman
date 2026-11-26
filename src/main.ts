@@ -57,6 +57,7 @@ declare global {
       // Phase 2: 新增测试钩子
       setAimDirection: (x: number, y: number) => void;
       setConsume: (consume: boolean) => void;
+      setIncomingDashDir: (x: number, y: number) => void;
       pressArrow: (direction: 'up' | 'down' | 'left' | 'right') => void;
       getTrajectoryPoints: () => any[];
     };
@@ -232,6 +233,7 @@ window.__TEST_API__ = {
       finalAngle,
       launchSpeed,
       lastLaunchSpeed: scene.lastLaunchSpeed,
+      lastLaunch: scene.lastLaunch,
       consumeAnchor: scene.consumeAnchor,
       trajectoryPointsLength: scene.trajectoryDots.length,
       // 环状态（从第一个锚点获取）
@@ -277,6 +279,11 @@ window.__TEST_API__ = {
     if (!scene) return;
     scene.consumeAnchor = consume;
     scene.cKeyDown = consume;
+  },
+  setIncomingDashDir: (x: number, y: number) => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    scene.incomingDashDir = { x, y };
   },
   pressArrow: (direction: 'up' | 'down' | 'left' | 'right') => {
     const scene = game.scene.scenes[0] as any;
