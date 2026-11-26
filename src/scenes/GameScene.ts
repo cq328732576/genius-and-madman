@@ -31,6 +31,7 @@ export class GameScene extends Phaser.Scene {
   private dashCooldown = 0;
   private _consumeAnchor = false; // Phase 2+: 锚点消耗机制（未使用）
   public testHoldDash = false; // E2E测试钩子：模拟按住冲刺键
+  private prevShift = false; // Shift边缘检测
 
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -527,8 +528,11 @@ export class GameScene extends Phaser.Scene {
       body.setVelocityX(0);
     }
 
-    // 冲刺
-    if (this.shiftKey.isDown && this.dashCooldown <= 0) {
+    // 冲刺（边缘检测：仅在按下时触发，不在持续按住时）
+    const shiftPressed = this.shiftKey.isDown && !this.prevShift;
+    this.prevShift = this.shiftKey.isDown;
+    
+    if (shiftPressed && this.dashCooldown <= 0) {
       this.tryDash();
     }
   }
@@ -584,6 +588,9 @@ export class GameScene extends Phaser.Scene {
       
       const body = this.madman.body as Phaser.Physics.Arcade.Body;
       body.allowGravity = false;
+      
+      // 显示吸附徽标
+      this.showSnapBadge();
     } else {
       // 短冲刺
       this.performShortDash(direction);
@@ -631,6 +638,9 @@ export class GameScene extends Phaser.Scene {
 
     this.isSnapped = false;
     this.snappedAnchorId = null;
+    
+    // 隐藏吸附徽标
+    this.hideSnapBadge();
   }
 
   private showMissBadge() {
@@ -649,6 +659,24 @@ export class GameScene extends Phaser.Scene {
         this.snapBadge.setVisible(false);
       }
     });
+  }
+
+  private showSnapBadge() {
+    if (!this.snapBadge) {
+      this.snapBadge = this.add.image(0, 0, 'snap_badge_snap_zh_m');
+      this.snapBadge.setScale(0.9);
+    } else {
+      this.snapBadge.setTexture('snap_badge_snap_zh_m');
+    }
+
+    this.snapBadge.setPosition(this.madman.x, this.madman.y - 80);
+    this.snapBadge.setVisible(true);
+  }
+
+  private hideSnapBadge() {
+    if (this.snapBadge) {
+      this.snapBadge.setVisible(false);
+    }
   }
 
   private updateDebugPanel() {

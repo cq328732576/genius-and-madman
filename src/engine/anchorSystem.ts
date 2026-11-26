@@ -284,6 +284,13 @@ export class AnchorSystem {
     return sorted[0] || null;
   }
 
+  private getOldestUnlockedAnchor(): Anchor | null {
+    const unlocked = Array.from(this.anchors.values())
+      .filter(a => a.state !== AnchorState.Locked)
+      .sort((a, b) => a.createdAt - b.createdAt);
+    return unlocked[0] || null;
+  }
+
   private findSurfaceAt(pos: Vec2, surfaces: Surface[]): Surface | null {
     // 简化实现：检查点是否在表面附近
     for (const surface of surfaces) {
