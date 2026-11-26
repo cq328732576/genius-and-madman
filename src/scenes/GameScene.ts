@@ -7,6 +7,7 @@ import Phaser from 'phaser';
 import { AnchorSystem, Vec2, Surface, AnchorState, Anchor } from '../engine/anchorSystem';
 import { tuning } from '../config/tuning';
 import { TuningPanel } from '../ui/TuningPanel';
+import { getCurrentLevel, LevelConfig } from '../config/levels';
 
 export class GameScene extends Phaser.Scene {
   private anchorSystem!: AnchorSystem;
@@ -14,6 +15,9 @@ export class GameScene extends Phaser.Scene {
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
   public frozen = false; // 冻结标志（用于截图）
 
+  // Phase 3: 关卡配置
+  private level!: LevelConfig;
+  
   // 角色
   private genius!: Phaser.Physics.Arcade.Sprite;
   private madman!: Phaser.Physics.Arcade.Sprite;
@@ -40,6 +44,17 @@ export class GameScene extends Phaser.Scene {
   private launchAirTime = -1; // Phase 2: 发射后空中时间（-1表示未发射，≥0表示发射后）
   private lastLaunch = { vx: 0, vy: 0, x: 0, y: 0 }; // Phase 2: 最后一次发射的瞬时状态（px/s, px）
 
+  // Phase 3: 关卡机制状态
+  private bridgeExtended = false;
+  private bridgeSprite: Phaser.GameObjects.Rectangle | null = null;
+  private bridgePhysics: Phaser.Physics.Arcade.Image | null = null;
+  private pressurePlateSprite: Phaser.GameObjects.Rectangle | null = null;
+  private exitZoneSprite: Phaser.GameObjects.Rectangle | null = null;
+  private checkpointPos: Vec2 = { x: 0, y: 0 };
+  private bothInExit = false;
+  private levelCleared = false;
+  private clearMessage: Phaser.GameObjects.Text | null = null;
+  
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
   private aimRayTiles: Phaser.GameObjects.Image[] = [];
@@ -110,6 +125,9 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.anchorSystem = new AnchorSystem(tuning);
 
+    // Phase 3: 加载关卡配置
+    this.level = getCurrentLevel();
+
     // 创建测试关卡
     this.createTestLevel();
 
@@ -139,74 +157,205 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTestLevel() {
-    // 保存静态平台供碰撞检测
+    // Phase 3: 创建「裂谷初跃」关卡
     this.platforms = this.physics.add.staticGroup();
+    const ppu = tuning.world.pixelsPerUnit;
+    const layout = this.level.layout;
 
-    // 创建地面
-    const ground = this.add.rectangle(640, 800, 1280, 64, 0x4a4a4a);
-    this.platforms.add(ground);
-
+    // === 左侧起始平台 ===
+    const leftPlatformPx = {
+      x: layout.leftPlatform.x * ppu,
+      y: layout.leftPlatform.y * ppu,
+      width: layout.leftPlatform.width * ppu,
+      height: layout.leftPlatform.height * ppu,
+    };
+    
+    const leftPlatform = this.add.rectangle(
+      leftPlatformPx.x,
+      leftPlatformPx.y,
+      leftPlatformPx.width,
+      leftPlatformPx.height,
+      0x5a9a5a
+    );
+    this.platforms.add(leftPlatform);
+    
     this.surfaces.push({
-      id: 'ground',
+      id: 'left_platform',
       isAttachable: true,
       points: [
-        { x: 0, y: 25 },
-        { x: 40, y: 25 },
-        { x: 40, y: 27 },
-        { x: 0, y: 27 },
+        { x: layout.leftPlatform.x - layout.leftPlatform.width / 2, y: layout.leftPlatform.y - layout.leftPlatform.height / 2 },
+        { x: layout.leftPlatform.x + layout.leftPlatform.width / 2, y: layout.leftPlatform.y - layout.leftPlatform.height / 2 },
+        { x: layout.leftPlatform.x + layout.leftPlatform.width / 2, y: layout.leftPlatform.y + layout.leftPlatform.height / 2 },
+        { x: layout.leftPlatform.x - layout.leftPlatform.width / 2, y: layout.leftPlatform.y + layout.leftPlatform.height / 2 },
       ],
     });
 
-    // 创建墙壁
-    const wall = this.add.rectangle(1200, 600, 64, 400, 0x6a6a6a);
-    this.platforms.add(wall);
-
-    this.surfaces.push({
-      id: 'wall',
-      isAttachable: true,
-      points: [
-        { x: 36, y: 6 },
-        { x: 38, y: 6 },
-        { x: 38, y: 18.5 },
-        { x: 36, y: 18.5 },
-      ],
-    });
-
-    // 创建平台（可附着）
-    const platform1 = this.add.rectangle(400, 600, 192, 32, 0x5a9a5a);
-    this.platforms.add(platform1);
-
-    this.surfaces.push({
-      id: 'platform1',
-      isAttachable: true,
-      points: [
-        { x: 9.5, y: 18 },
-        { x: 15.5, y: 18 },
-        { x: 15.5, y: 19 },
-        { x: 9.5, y: 19 },
-      ],
-    });
-
-    // 创建不可附着平台（红色）
-    const platform2 = this.add.rectangle(800, 500, 192, 32, 0x9a5a5a);
-    this.platforms.add(platform2);
-
-    // 添加标签
-    this.add.text(400, 630, '可附着', {
+    this.add.text(leftPlatformPx.x, leftPlatformPx.y - 40, '起点', {
       fontSize: '16px',
       color: '#fff',
     }).setOrigin(0.5);
 
-    this.add.text(800, 530, '不可附着', {
+    // === 右侧目标平台 ===
+    const rightPlatformPx = {
+      x: layout.rightPlatform.x * ppu,
+      y: layout.rightPlatform.y * ppu,
+      width: layout.rightPlatform.width * ppu,
+      height: layout.rightPlatform.height * ppu,
+    };
+    
+    const rightPlatform = this.add.rectangle(
+      rightPlatformPx.x,
+      rightPlatformPx.y,
+      rightPlatformPx.width,
+      rightPlatformPx.height,
+      0x5a9a5a
+    );
+    this.platforms.add(rightPlatform);
+    
+    this.surfaces.push({
+      id: 'right_platform',
+      isAttachable: true,
+      points: [
+        { x: layout.rightPlatform.x - layout.rightPlatform.width / 2, y: layout.rightPlatform.y - layout.rightPlatform.height / 2 },
+        { x: layout.rightPlatform.x + layout.rightPlatform.width / 2, y: layout.rightPlatform.y - layout.rightPlatform.height / 2 },
+        { x: layout.rightPlatform.x + layout.rightPlatform.width / 2, y: layout.rightPlatform.y + layout.rightPlatform.height / 2 },
+        { x: layout.rightPlatform.x - layout.rightPlatform.width / 2, y: layout.rightPlatform.y + layout.rightPlatform.height / 2 },
+      ],
+    });
+
+    this.add.text(rightPlatformPx.x, rightPlatformPx.y - 40, '目标', {
       fontSize: '16px',
       color: '#fff',
     }).setOrigin(0.5);
 
-    // 裂谷（深色背景表示）
-    this.add.rectangle(600, 750, 400, 100, 0x2a2a2a);
-    this.add.text(600, 750, '裂谷', {
-      fontSize: '24px',
-      color: '#888',
+    // === 可吸附板（凸台）===
+    const platePx = {
+      x: layout.attachablePlate.x * ppu,
+      y: layout.attachablePlate.y * ppu,
+      width: layout.attachablePlate.width * ppu,
+      height: layout.attachablePlate.height * ppu,
+    };
+    
+    const attachablePlate = this.add.rectangle(
+      platePx.x,
+      platePx.y,
+      platePx.width,
+      platePx.height,
+      0x7aaa7a
+    );
+    this.platforms.add(attachablePlate);
+    
+    this.surfaces.push({
+      id: 'attachable_plate',
+      isAttachable: true,
+      points: [
+        { x: layout.attachablePlate.x - layout.attachablePlate.width / 2, y: layout.attachablePlate.y - layout.attachablePlate.height / 2 },
+        { x: layout.attachablePlate.x + layout.attachablePlate.width / 2, y: layout.attachablePlate.y - layout.attachablePlate.height / 2 },
+        { x: layout.attachablePlate.x + layout.attachablePlate.width / 2, y: layout.attachablePlate.y + layout.attachablePlate.height / 2 },
+        { x: layout.attachablePlate.x - layout.attachablePlate.width / 2, y: layout.attachablePlate.y + layout.attachablePlate.height / 2 },
+      ],
+    });
+
+    this.add.text(platePx.x, platePx.y, '锚点板', {
+      fontSize: '12px',
+      color: '#fff',
+    }).setOrigin(0.5);
+
+    // === 裂谷（深色背景）===
+    const riftCenterX = (layout.leftPlatform.x + layout.leftPlatform.width / 2 + layout.rightPlatform.x - layout.rightPlatform.width / 2) / 2;
+    const riftWidth = layout.riftWidth * ppu;
+    const riftY = layout.leftPlatform.y * ppu + 150;
+    
+    this.add.rectangle(riftCenterX * ppu, riftY, riftWidth, 200, 0x1a1a1a);
+    this.add.text(riftCenterX * ppu, riftY, '裂谷 (10u)', {
+      fontSize: '20px',
+      color: '#666',
+    }).setOrigin(0.5);
+
+    // === 压力板 ===
+    const pressurePlatePx = {
+      x: layout.pressurePlate.x * ppu,
+      y: layout.pressurePlate.y * ppu,
+      width: layout.pressurePlate.width * ppu,
+      height: layout.pressurePlate.height * ppu,
+    };
+    
+    this.pressurePlateSprite = this.add.rectangle(
+      pressurePlatePx.x,
+      pressurePlatePx.y,
+      pressurePlatePx.width,
+      pressurePlatePx.height,
+      0xffaa00
+    );
+    
+    this.add.text(pressurePlatePx.x, pressurePlatePx.y - 25, '压力板', {
+      fontSize: '12px',
+      color: '#fff',
+    }).setOrigin(0.5);
+
+    // === 桥梁（初始收回）===
+    const bridgePx = {
+      retractedX: layout.bridge.retractedX * ppu,
+      y: layout.bridge.y * ppu,
+      width: layout.bridge.width * ppu,
+      height: layout.bridge.height * ppu,
+    };
+    
+    this.bridgeSprite = this.add.rectangle(
+      bridgePx.retractedX,
+      bridgePx.y,
+      bridgePx.width,
+      bridgePx.height,
+      0x8a7a5a
+    );
+    this.bridgeSprite.setVisible(false); // 初始隐藏
+    
+    // 创建桥梁物理体（使用 physics.add.image）
+    this.bridgePhysics = this.physics.add.image(
+      bridgePx.retractedX,
+      bridgePx.y,
+      ''
+    ).setVisible(false);
+    
+    const bridgeBody = this.bridgePhysics.body as Phaser.Physics.Arcade.Body;
+    bridgeBody.setImmovable(true);
+    bridgeBody.setAllowGravity(false);
+    bridgeBody.setSize(bridgePx.width, bridgePx.height);
+    bridgeBody.enable = false; // 初始禁用碰撞
+
+    // === 出口区 ===
+    const exitPx = {
+      x: layout.exitZone.x * ppu,
+      y: layout.exitZone.y * ppu,
+      width: layout.exitZone.width * ppu,
+      height: layout.exitZone.height * ppu,
+    };
+    
+    this.exitZoneSprite = this.add.rectangle(
+      exitPx.x,
+      exitPx.y,
+      exitPx.width,
+      exitPx.height,
+      0x00ff00,
+      0.3
+    );
+    
+    this.add.text(exitPx.x, exitPx.y, '出口', {
+      fontSize: '16px',
+      color: '#fff',
+      backgroundColor: '#0008',
+      padding: { x: 4, y: 2 },
+    }).setOrigin(0.5);
+
+    // === 检查点 ===
+    this.checkpointPos = {
+      x: layout.checkpoint.x,
+      y: layout.checkpoint.y,
+    };
+    
+    this.add.text(layout.checkpoint.x * ppu, (layout.checkpoint.y - 1) * ppu, '检查点', {
+      fontSize: '12px',
+      color: '#00ffff',
     }).setOrigin(0.5);
   }
 
@@ -214,24 +363,25 @@ export class GameScene extends Phaser.Scene {
     const ppu = tuning.world.pixelsPerUnit;
     const charHeight = tuning.world.characterHeight * ppu; // 1.8 * 32 = 58px
 
-    // 平台1顶部 = 600 - 32/2 = 584
-    const platform1Top = 584;
+    // Phase 3: 在检查点位置生成角色
+    const spawnX = this.checkpointPos.x * ppu;
+    const spawnY = this.checkpointPos.y * ppu;
 
-    // 天才（蓝色） - 站在左侧平台上
-    this.genius = this.physics.add.sprite(400, platform1Top, 'genius_char');
+    // 天才（蓝色）
+    this.genius = this.physics.add.sprite(spawnX - 20, spawnY, 'genius_char');
     this.genius.setOrigin(0.5, 1); // 底部对齐
     const geniusBody = this.genius.body as Phaser.Physics.Arcade.Body;
     geniusBody.setCollideWorldBounds(true);
     geniusBody.setSize(charHeight * 0.5, charHeight);
-    geniusBody.setOffset((charHeight * 0.5) / 4, 0); // 居中碰撞体
+    geniusBody.setOffset((charHeight * 0.5) / 4, 0);
 
-    // 疯子（橙色） - 站在左侧平台上
-    this.madman = this.physics.add.sprite(500, platform1Top, 'madman_char');
+    // 疯子（橙色）
+    this.madman = this.physics.add.sprite(spawnX + 20, spawnY, 'madman_char');
     this.madman.setOrigin(0.5, 1); // 底部对齐
     const madmanBody = this.madman.body as Phaser.Physics.Arcade.Body;
     madmanBody.setCollideWorldBounds(true);
     madmanBody.setSize(charHeight * 0.5, charHeight);
-    madmanBody.setOffset((charHeight * 0.5) / 4, 0); // 居中碰撞体
+    madmanBody.setOffset((charHeight * 0.5) / 4, 0);
 
     // 添加碰撞检测
     this.physics.add.collider(this.genius, this.platforms);
@@ -330,6 +480,11 @@ export class GameScene extends Phaser.Scene {
 
     // 更新锚点渲染
     this.updateAnchorSprites();
+
+    // Phase 3: 更新关卡机制
+    this.updatePressurePlate();
+    this.updateExitZone();
+    this.checkDeathZone();
 
     // 更新调试面板
     if (this.debugPanel) {
@@ -994,5 +1149,162 @@ export class GameScene extends Phaser.Scene {
   private unitsToPixels(ux: number, uy: number): { x: number; y: number } {
     const ppu = tuning.world.pixelsPerUnit;
     return { x: ux * ppu, y: uy * ppu };
+  }
+
+  // ===== Phase 3: 关卡机制 =====
+
+  private updatePressurePlate() {
+    if (!this.pressurePlateSprite || this.bridgeExtended) {
+      return; // 桥梁已伸出，不再检查
+    }
+
+    const ppu = tuning.world.pixelsPerUnit;
+    const layout = this.level.layout;
+    
+    // 检查疯子是否站在压力板上
+    const madmanU = this.pixelsToUnits(this.madman.x, this.madman.y);
+    const plateLeft = layout.pressurePlate.x - layout.pressurePlate.width / 2;
+    const plateRight = layout.pressurePlate.x + layout.pressurePlate.width / 2;
+    const plateTop = layout.pressurePlate.y - layout.pressurePlate.height / 2;
+    const plateBottom = layout.pressurePlate.y + layout.pressurePlate.height / 2;
+    
+    const madmanOnPlate = (
+      madmanU.x >= plateLeft &&
+      madmanU.x <= plateRight &&
+      madmanU.y >= plateTop &&
+      madmanU.y <= plateBottom
+    );
+
+    if (madmanOnPlate && !this.bridgeExtended) {
+      this.extendBridge();
+    }
+  }
+
+  private extendBridge() {
+    if (this.bridgeExtended || !this.bridgeSprite || !this.bridgePhysics) {
+      return;
+    }
+
+    this.bridgeExtended = true;
+    const ppu = tuning.world.pixelsPerUnit;
+    const layout = this.level.layout;
+    
+    // 伸出桥梁到目标位置
+    const targetX = layout.bridge.extendedX * ppu;
+    
+    this.bridgeSprite.setVisible(true);
+    this.bridgePhysics.setVisible(false); // 保持不可见，仅用于碰撞
+    
+    // 动画伸出
+    this.tweens.add({
+      targets: [this.bridgeSprite, this.bridgePhysics],
+      x: targetX,
+      duration: layout.bridge.extendDuration * 1000,
+      ease: 'Power2',
+      onComplete: () => {
+        // 启用碰撞
+        const bridgeBody = this.bridgePhysics!.body as Phaser.Physics.Arcade.Body;
+        bridgeBody.enable = true;
+        
+        // 添加与角色的碰撞
+        this.physics.add.collider(this.genius, this.bridgePhysics!);
+        this.physics.add.collider(this.madman, this.bridgePhysics!);
+      },
+    });
+
+    // 压力板变色
+    this.pressurePlateSprite!.setFillStyle(0x00ff00);
+  }
+
+  private updateExitZone() {
+    if (this.levelCleared) {
+      return;
+    }
+
+    const ppu = tuning.world.pixelsPerUnit;
+    const layout = this.level.layout;
+    
+    // 检查双方是否都在出口区
+    const geniusU = this.pixelsToUnits(this.genius.x, this.genius.y);
+    const madmanU = this.pixelsToUnits(this.madman.x, this.madman.y);
+    
+    const exitLeft = layout.exitZone.x - layout.exitZone.width / 2;
+    const exitRight = layout.exitZone.x + layout.exitZone.width / 2;
+    const exitTop = layout.exitZone.y - layout.exitZone.height / 2;
+    const exitBottom = layout.exitZone.y + layout.exitZone.height / 2;
+    
+    const geniusInExit = (
+      geniusU.x >= exitLeft &&
+      geniusU.x <= exitRight &&
+      geniusU.y >= exitTop &&
+      geniusU.y <= exitBottom
+    );
+    
+    const madmanInExit = (
+      madmanU.x >= exitLeft &&
+      madmanU.x <= exitRight &&
+      madmanU.y >= exitTop &&
+      madmanU.y <= exitBottom
+    );
+
+    if (geniusInExit && madmanInExit && !this.bothInExit) {
+      this.bothInExit = true;
+      this.showClearMessage();
+    } else if (!(geniusInExit && madmanInExit)) {
+      this.bothInExit = false;
+    }
+  }
+
+  private showClearMessage() {
+    this.levelCleared = true;
+    
+    if (this.clearMessage) {
+      this.clearMessage.destroy();
+    }
+
+    this.clearMessage = this.add.text(960, 540, '通关！\n双人协作成功！', {
+      fontSize: '48px',
+      color: '#fff',
+      backgroundColor: '#00aa00',
+      padding: { x: 20, y: 20 },
+      align: 'center',
+    });
+    this.clearMessage.setOrigin(0.5);
+    this.clearMessage.setScrollFactor(0);
+    this.clearMessage.setDepth(2000);
+  }
+
+  private checkDeathZone() {
+    const ppu = tuning.world.pixelsPerUnit;
+    const deathY = this.level.mechanics.deathZoneY * ppu;
+    
+    // 检查任一角色是否掉入死亡区
+    if (this.genius.y > deathY || this.madman.y > deathY) {
+      this.respawnAtCheckpoint();
+    }
+  }
+
+  private respawnAtCheckpoint() {
+    const ppu = tuning.world.pixelsPerUnit;
+    const spawnX = this.checkpointPos.x * ppu;
+    const spawnY = this.checkpointPos.y * ppu;
+
+    // 重置双方位置
+    this.genius.setPosition(spawnX - 20, spawnY);
+    this.genius.setVelocity(0, 0);
+    
+    this.madman.setPosition(spawnX + 20, spawnY);
+    this.madman.setVelocity(0, 0);
+
+    // 重置锚点系统
+    this.anchorSystem.clearAnchors();
+    this.anchorSprites.forEach((container) => container.destroy());
+    this.anchorSprites.clear();
+    
+    // 重置吸附状态
+    this.isSnapped = false;
+    this.snappedAnchorId = null;
+    this.aimWindowTimer = 0;
+    this.dashCooldown = 0;
   }
 }
