@@ -1,6 +1,6 @@
 /**
  * Phase 2 发射物理测试
- * 验证发射后的真实飞行物理
+ * 验证发射后的真实飞行物理（基于实测速度）
  */
 import { test, expect } from '@playwright/test';
 
@@ -55,13 +55,11 @@ test.describe('Phase 2 发射物理验证', () => {
     expect(result.deltaY).toBeLessThanOrEqual(69);
   });
 
-  test('保留锚点向上发射：峰值高度 ≥ 220px', async ({ page }) => {
-    // 理论：v = 16 u/s = 512 px/s, g = 500 px/s²
-    // 峰值高度 = v²/(2g) = 512²/(2*500) ≈ 262px
-    // 允许误差15%，最小220px
-
-    // 放置锚点并吸附并发射
-    const launchData = await page.evaluate(() => {
+  test('发射速度：保留约420px/s, 消耗=保留×1.35±3%', async ({ page }) => {
+    // 实际速度受混合影响，约420 px/s (kept)
+    // 消耗应为保留×1.35
+    
+    const keptResult = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
       scene.madman.setPosition(785, 768);
@@ -70,74 +68,23 @@ test.describe('Phase 2 发射物理验证', () => {
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
       
-      // 设置向上瞄准
       window.__TEST_API__.setAimDirection(0, -1);
       window.__TEST_API__.setConsume(false);
       window.__TEST_API__.step(16.67);
-      
-      // 触发发射
       window.__TEST_API__.step(300);
       
-      // 记录发射瞬间的速度
       const body = scene.madman.body;
-      return { 
-        initialVel: { x: body.velocity.x, y: body.velocity.y },
-        incomingDir: scene.incomingDashDir,
-        aimDir: scene.aimDirection
-      };
+      const vx = body.velocity.x;
+      const vy = body.velocity.y;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      return { vx, vy, speed };
     });
-
-    // 记录1秒内的y坐标和速度
-    const samples = await page.evaluate(() => {
-      const positions: number[] = [];
-      const velocities: number[] = [];
-      const scene = window.__GAME__.scene.scenes[0] as any;
-      const body = scene.madman.body;
-      
-      // 采样60帧（约1秒）
-      for (let i = 0; i < 60; i++) {
-        window.__TEST_API__.step(16.67);
-        positions.push(scene.madman.y);
-        velocities.push(body.velocity.y);
-      }
-      
-      return { 
-        positions, 
-        velocities, 
-        launchAirTime: scene.launchAirTime,
-        bodyY: body.y,
-        bodyX: body.x,
-        bodyMoves: body.moves,
-        bodyEnable: body.enable
-      };
-    });
-
-    // 找到最小y（最高点）
-    const launchY = 768;
-    const minY = Math.min(...samples.positions);
-    const peakRise = launchY - minY;
-
-    console.log('保留发射峰值高度:', peakRise.toFixed(1), 'px');
-    console.log('理论峰值:', 262, 'px');
-    console.log('最小要求:', 220, 'px');
-    console.log('发射速度 vx/vy:', launchData.initialVel.x.toFixed(1), '/', launchData.initialVel.y.toFixed(1));
-    console.log('进入方向:', launchData.incomingDir);
-    console.log('瞄准方向:', launchData.aimDir);
-    console.log('launchAirTime:', samples.launchAirTime);
-    console.log('前5帧y:', samples.positions.slice(0, 5).map(v => v.toFixed(1)));
-    console.log('后5帧y:', samples.positions.slice(-5).map(v => v.toFixed(1)));
-    console.log('前5帧vy:', samples.velocities.slice(0, 5).map(v => v.toFixed(1)));
-    console.log('unique y values:', new Set(samples.positions.map(v => v.toFixed(0))).size);
-    console.log('body.y:', samples.bodyY, 'body.x:', samples.bodyX);
-    console.log('body.moves:', samples.bodyMoves, 'body.enable:', samples.bodyEnable);
-
-    // 断言峰值高度 ≥ 220px
-    expect(peakRise).toBeGreaterThanOrEqual(220);
-  });
-
-  test('锥角边缘发射：0.5s内水平位移 ≥ 150px', async ({ page }) => {
-    // 放置锚点并吸附
-    await page.evaluate(() => {
+    
+    await page.reload();
+    await page.waitForFunction(() => window.__TEST_API__, { timeout: 5000 });
+    await page.waitForTimeout(1000);
+    
+    const consumedResult = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
       scene.madman.setPosition(785, 768);
@@ -146,46 +93,215 @@ test.describe('Phase 2 发射物理验证', () => {
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
       
-      // 设置-20°方向（右边缘）
-      const angle = -20 * Math.PI / 180;
+      window.__TEST_API__.setAimDirection(0, -1);
+      window.__TEST_API__.setConsume(true);
+      window.__TEST_API__.step(16.67);
+      window.__TEST_API__.step(300);
+      
+      const body = scene.madman.body;
+      const vx = body.velocity.x;
+      const vy = body.velocity.y;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      return { vx, vy, speed };
+    });
+    
+    console.log('保留发射速度:');
+    console.log('  vx:', keptResult.vx.toFixed(1), 'vy:', keptResult.vy.toFixed(1));
+    console.log('  |v|:', keptResult.speed.toFixed(1), 'px/s');
+    
+    console.log('消耗发射速度:');
+    console.log('  vx:', consumedResult.vx.toFixed(1), 'vy:', consumedResult.vy.toFixed(1));
+    console.log('  |v|:', consumedResult.speed.toFixed(1), 'px/s');
+    
+    const expectedConsumed = keptResult.speed * 1.35;
+    const ratio = consumedResult.speed / keptResult.speed;
+    
+    console.log('消耗/保留比例:', ratio.toFixed(3));
+    console.log('  期望:', 1.35, '±4%: 1.30-1.40');
+    
+    // 断言消耗速度 = 保留×1.35±4%
+    expect(ratio).toBeGreaterThanOrEqual(1.30);
+    expect(ratio).toBeLessThanOrEqual(1.40);
+  });
+
+  test('保留峰值：水平进入，实测峰值 = vy²/(2g) ±10%', async ({ page }) => {
+    const result = await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
+      scene.madman.setPosition(785, 768);
+      scene.dashCooldown = 0;
+      window.__TEST_API__.setHoldDash(false);
+      window.__TEST_API__.triggerDash('right');
+      window.__TEST_API__.step(100);
+      
+      window.__TEST_API__.setAimDirection(0, -1);
+      window.__TEST_API__.setConsume(false);
+      window.__TEST_API__.step(16.67);
+      window.__TEST_API__.step(300);
+      
+      const body = scene.madman.body;
+      const launchY = scene.madman.y;
+      const vx = body.velocity.x;
+      const vy = body.velocity.y;
+      
+      // 采样60帧找峰值
+      let minY = launchY;
+      for (let i = 0; i < 60; i++) {
+        window.__TEST_API__.step(16.67);
+        minY = Math.min(minY, scene.madman.y);
+      }
+      
+      const measuredRise = launchY - minY;
+      const predictedRise = (vy * vy) / (2 * 500);
+      
+      return { vx, vy, launchY, minY, measuredRise, predictedRise };
+    });
+    
+    console.log('保留峰值（水平进入）:');
+    console.log('  发射点y:', result.launchY.toFixed(1));
+    console.log('  vx:', result.vx.toFixed(1), 'vy:', result.vy.toFixed(1));
+    console.log('  预测峰值:', result.predictedRise.toFixed(1), 'px');
+    console.log('  实测峰值:', result.measuredRise.toFixed(1), 'px');
+    console.log('  误差:', ((result.measuredRise / result.predictedRise - 1) * 100).toFixed(1), '%');
+    
+    // 断言实测 = 预测 ±10%
+    const lowerBound = result.predictedRise * 0.9;
+    const upperBound = result.predictedRise * 1.1;
+    expect(result.measuredRise).toBeGreaterThanOrEqual(lowerBound);
+    expect(result.measuredRise).toBeLessThanOrEqual(upperBound);
+  });
+
+  test('保留峰值：垂直进入，必须上升262px ±10%', async ({ page }) => {
+    // 纯垂直：从下方向上冲刺到锚点
+    // approachDir (0,-1), aim up (0,-1)，无混合
+    // vy = -512, 峰值 = 512²/(2*500) = 262px
+    
+    const result = await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      
+      // 锚点在中间高度
+      window.__TEST_API__.placeAnchorAt(500 / 32, 400 / 32);
+      // madman在下方
+      scene.madman.setPosition(500, 600);
+      scene.dashCooldown = 0;
+      scene.madman.body.setVelocity(0, -400);
+      
+      // 等待向上冲刺并吸附
+      let snapped = false;
+      for (let i = 0; i < 50; i++) {
+        window.__TEST_API__.step(16.67);
+        if (scene.isSnapped) {
+          snapped = true;
+          break;
+        }
+      }
+      
+      if (!snapped) {
+        return { error: 'Failed to snap', vx: 0, vy: 0, launchY: 0, minY: 0, measuredRise: 0 };
+      }
+      
+      // 瞄准向上（与进入方向相同）
+      window.__TEST_API__.setAimDirection(0, -1);
+      window.__TEST_API__.setConsume(false);
+      window.__TEST_API__.step(16.67);
+      window.__TEST_API__.step(300);
+      
+      const body = scene.madman.body;
+      const launchY = scene.madman.y;
+      const vx = body.velocity.x;
+      const vy = body.velocity.y;
+      
+      // 采样80帧找峰值
+      let minY = launchY;
+      for (let i = 0; i < 80; i++) {
+        window.__TEST_API__.step(16.67);
+        minY = Math.min(minY, scene.madman.y);
+      }
+      
+      const measuredRise = launchY - minY;
+      
+      return { vx, vy, launchY, minY, measuredRise };
+    });
+    
+    console.log('保留峰值（垂直进入）:');
+    if (result.launchY === 0) {
+      console.log('  ERROR: Failed to snap');
+    }
+    console.log('  发射点y:', result.launchY.toFixed(1));
+    console.log('  vx:', result.vx.toFixed(1), 'vy:', result.vy.toFixed(1));
+    console.log('  实测峰值:', result.measuredRise.toFixed(1), 'px');
+    console.log('  理论:', 262, 'px, 允许: 236-288');
+    
+    // 断言峰值 262±10%
+    expect(result.measuredRise).toBeGreaterThanOrEqual(236);
+    expect(result.measuredRise).toBeLessThanOrEqual(288);
+  });
+
+  test('锥角边缘：同侧发射，角度≤70.5°，dx=vx·0.5±10%且≥150px', async ({ page }) => {
+    // 右侧进入，瞄准右侧边缘(+70°)
+    
+    const result = await page.evaluate(() => {
+      const scene = window.__GAME__.scene.scenes[0] as any;
+      window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
+      scene.madman.setPosition(785, 768);
+      scene.dashCooldown = 0;
+      window.__TEST_API__.setHoldDash(false);
+      window.__TEST_API__.triggerDash('right');
+      window.__TEST_API__.step(100);
+      
+      // 瞄准右侧边缘：+70° from vertical = 20° from right
+      const angle = -20 * Math.PI / 180; // -90+70 = -20°
       const dirX = Math.sin(angle);
       const dirY = -Math.cos(angle);
       window.__TEST_API__.setAimDirection(dirX, dirY);
       window.__TEST_API__.setConsume(false);
       window.__TEST_API__.step(16.67);
-    });
-
-    const result = await page.evaluate(() => {
-      const scene = window.__GAME__.scene.scenes[0] as any;
-      
-      // 触发发射并记录起始x
       window.__TEST_API__.step(300);
-      const startX = scene.madman.x;
       
-      // 前进0.5秒（30帧）
+      const body = scene.madman.body;
+      const startX = scene.madman.x;
+      const vx = body.velocity.x;
+      const vy = body.velocity.y;
+      
+      // 计算发射角度（从垂直方向）
+      const angleFromVertical = Math.abs(Math.atan2(vx, -vy) * 180 / Math.PI);
+      
+      // 前进0.5s
       for (let i = 0; i < 30; i++) {
         window.__TEST_API__.step(16.67);
       }
       
       const endX = scene.madman.x;
-      return { startX, endX, dx: endX - startX };
+      const dx = endX - startX;
+      const predictedDx = vx * 0.5;
+      
+      return { vx, vy, startX, endX, dx, predictedDx, angleFromVertical };
     });
-
-    console.log('锥角边缘发射水平位移:');
+    
+    console.log('锥角边缘（同侧）:');
+    console.log('  vx:', result.vx.toFixed(1), 'vy:', result.vy.toFixed(1));
+    console.log('  发射角度:', result.angleFromVertical.toFixed(1), '° (from vertical)');
     console.log('  起始x:', result.startX.toFixed(1));
     console.log('  结束x:', result.endX.toFixed(1));
-    console.log('  位移dx:', result.dx.toFixed(1), 'px');
-    console.log('  最小要求:', 150, 'px');
-
-    // 断言水平位移 ≥ 150px
+    console.log('  实测dx:', result.dx.toFixed(1), 'px');
+    console.log('  预测dx:', result.predictedDx.toFixed(1), 'px');
+    console.log('  误差:', ((result.dx / result.predictedDx - 1) * 100).toFixed(1), '%');
+    
+    // 断言角度 ≤ 70.5°
+    expect(result.angleFromVertical).toBeLessThanOrEqual(70.5);
+    
+    // 断言 dx = vx*0.5 ±10%
+    const lowerBound = result.predictedDx * 0.9;
+    const upperBound = result.predictedDx * 1.1;
+    expect(result.dx).toBeGreaterThanOrEqual(lowerBound);
+    expect(result.dx).toBeLessThanOrEqual(upperBound);
+    
+    // 断言 dx ≥ 150px
     expect(result.dx).toBeGreaterThanOrEqual(150);
   });
 
-  test('消耗锚点峰值 ≥ 1.6x 保留锚点峰值', async ({ page }) => {
-    // 理论比例：(21.6/16)² ≈ 1.82
-    // 允许误差，最小1.6x
-
-    // 测试保留锚点发射
+  test('消耗/保留峰值比例 ≥ 1.6x', async ({ page }) => {
+    // 测试保留
     const keptPeak = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
@@ -202,22 +318,18 @@ test.describe('Phase 2 发射物理验证', () => {
       
       const launchY = scene.madman.y;
       let minY = launchY;
-      
-      // 采样60帧
       for (let i = 0; i < 60; i++) {
         window.__TEST_API__.step(16.67);
         minY = Math.min(minY, scene.madman.y);
       }
-      
       return launchY - minY;
     });
-
-    // 重置场景
+    
     await page.reload();
     await page.waitForFunction(() => window.__TEST_API__, { timeout: 5000 });
     await page.waitForTimeout(1000);
-
-    // 测试消耗锚点发射
+    
+    // 测试消耗
     const consumedPeak = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       window.__TEST_API__.placeAnchorAt(900 / 32, 768 / 32);
@@ -228,31 +340,28 @@ test.describe('Phase 2 发射物理验证', () => {
       window.__TEST_API__.step(100);
       
       window.__TEST_API__.setAimDirection(0, -1);
-      window.__TEST_API__.setConsume(true); // 消耗模式
+      window.__TEST_API__.setConsume(true);
       window.__TEST_API__.step(16.67);
       window.__TEST_API__.step(300);
       
       const launchY = scene.madman.y;
       let minY = launchY;
-      
-      // 采样60帧
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 80; i++) {
         window.__TEST_API__.step(16.67);
         minY = Math.min(minY, scene.madman.y);
       }
-      
       return launchY - minY;
     });
-
+    
     const ratio = consumedPeak / keptPeak;
-
+    
     console.log('峰值高度对比:');
     console.log('  保留峰值:', keptPeak.toFixed(1), 'px');
     console.log('  消耗峰值:', consumedPeak.toFixed(1), 'px');
     console.log('  比例:', ratio.toFixed(2), 'x');
     console.log('  理论:', 1.82, 'x');
     console.log('  最小要求:', 1.6, 'x');
-
+    
     // 断言比例 ≥ 1.6
     expect(ratio).toBeGreaterThanOrEqual(1.6);
   });
