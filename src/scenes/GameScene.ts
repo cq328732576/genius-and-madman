@@ -45,6 +45,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
+    // 创建角色纹理（简单彩色矩形，高度 1.8u）
+    const ppu = 32; // 像素/单位
+    const w = Math.floor(1.8 * ppu * 0.5); // 宽度 0.9u
+    const h = Math.floor(1.8 * ppu); // 高度 1.8u
+    
+    // 天才（蓝色）
+    const geniusGraphics = this.make.graphics({ x: 0, y: 0 });
+    geniusGraphics.fillStyle(0x2fd5ff, 1);
+    geniusGraphics.fillRect(0, 0, w, h);
+    geniusGraphics.generateTexture('genius_char', w, h);
+    geniusGraphics.destroy();
+    
+    // 疯子（橙色）
+    const madmanGraphics = this.make.graphics({ x: 0, y: 0 });
+    madmanGraphics.fillStyle(0xff8a1f, 1);
+    madmanGraphics.fillRect(0, 0, w, h);
+    madmanGraphics.generateTexture('madman_char', w, h);
+    madmanGraphics.destroy();
+    
     // 加载锚点光圈
     this.load.image('anchor_halo_ready_g', 'assets/anchor_halo_ready_g.png');
     this.load.image('anchor_halo_snap_g', 'assets/anchor_halo_snap_g.png');
@@ -174,19 +193,21 @@ export class GameScene extends Phaser.Scene {
     const ppu = tuning.world.pixelsPerUnit;
     const charHeight = tuning.world.characterHeight * ppu;
 
-    // 天才（蓝色）
-    this.genius = this.physics.add.sprite(200, 750, '');
-    this.genius.setDisplaySize(charHeight * 0.5, charHeight);
-    this.genius.setTint(0x2fd5ff);
+    // 天才（蓝色） - 生成在左侧平台上
+    this.genius = this.physics.add.sprite(400, 600 - charHeight/2 - 20, 'genius_char');
+    this.genius.setOrigin(0.5, 1); // 底部对齐
     this.physics.world.enable(this.genius);
-    (this.genius.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+    const geniusBody = this.genius.body as Phaser.Physics.Arcade.Body;
+    geniusBody.setCollideWorldBounds(true);
+    geniusBody.setSize(charHeight * 0.5, charHeight);
 
-    // 疯子（橙色）
-    this.madman = this.physics.add.sprite(300, 750, '');
-    this.madman.setDisplaySize(charHeight * 0.5, charHeight);
-    this.madman.setTint(0xff8a1f);
+    // 疯子（橙色） - 生成在左侧平台上
+    this.madman = this.physics.add.sprite(500, 600 - charHeight/2 - 20, 'madman_char');
+    this.madman.setOrigin(0.5, 1); // 底部对齐
     this.physics.world.enable(this.madman);
-    (this.madman.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+    const madmanBody = this.madman.body as Phaser.Physics.Arcade.Body;
+    madmanBody.setCollideWorldBounds(true);
+    madmanBody.setSize(charHeight * 0.5, charHeight);
 
     // 添加标签
     this.add.text(0, 0, '天才', {
