@@ -44,12 +44,12 @@ declare global {
     __TEST_API__: {
       placeAnchor: (x: number, y: number) => boolean;
       lockAnchor: (index: number) => boolean;
-      snapToAnchor: (anchorIndex: number) => void;
       setMadmanPosition: (x: number, y: number) => void;
       setGeniusPosition: (x: number, y: number) => void;
+      step: (ms: number) => void;
+      triggerDash: (direction: 'left' | 'right') => void;
+      getState: () => any;
       getAnchors: () => any[];
-      isSnapped: () => boolean;
-      getAimWindowTimer: () => number;
     };
   }
 }
@@ -78,17 +78,6 @@ window.__TEST_API__ = {
     if (index >= anchors.length) return false;
     return scene.anchorSystem.lockAnchor(anchors[index].id);
   },
-  snapToAnchor: (anchorIndex: number) => {
-    const scene = game.scene.scenes[0] as any;
-    if (!scene || !scene.anchorSystem) return;
-    const anchors = scene.anchorSystem.getAnchors();
-    if (anchorIndex >= anchors.length) return;
-    
-    scene.isSnapped = true;
-    scene.snappedAnchorId = anchors[anchorIndex].id;
-    scene.aimWindowTimer = 0;
-    scene.anchorSystem.lockAnchor(anchors[anchorIndex].id);
-  },
   setMadmanPosition: (x: number, y: number) => {
     const scene = game.scene.scenes[0] as any;
     if (!scene || !scene.madman) return;
@@ -101,18 +90,62 @@ window.__TEST_API__ = {
     scene.genius.setPosition(x, y);
     scene.genius.setVelocity(0, 0);
   },
+  // 步进游戏帧（固定时间步长）
+  step: (ms: number) => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    const steps = Math.ceil(ms / 16.67); // 60 FPS
+    for (let i = 0; i < steps; i++) {
+      scene.update(0, 16.67);
+    }
+  },
+  // 触发冲刺（模拟按键并步进）
+  triggerDash: (direction: 'left' | 'right') => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return;
+    
+    // 设置方向键状态
+    if (direction === 'left') {
+      scene.cursors.left.isDown = true;
+      scene.cursors.right.isDown = false;
+    } else {
+      scene.cursors.left.isDown = false;
+      scene.cursors.right.isDown = true;
+    }
+    
+    // 设置 Shift 状态
+    scene.shiftKey.isDown = true;
+    scene.dashCooldown = 0; // 确保可以冲刺
+    
+    // 步进一帧让 updateMadmanMovement 调用 tryDash
+    scene.update(0, 16.67);
+    
+    // 清除方向键但保持 Shift（用于瞄准窗口）
+    scene.cursors.left.isDown = false;
+    scene.cursors.right.isDown = false;
+  },
+  // 获取游戏状态
+  getState: () => {
+    const scene = game.scene.scenes[0] as any;
+    if (!scene) return null;
+    return {
+      isSnapped: scene.isSnapped,
+      snappedAnchorId: scene.snappedAnchorId,
+      aimWindowTimer: scene.aimWindowTimer,
+      dashCooldown: scene.dashCooldown,
+      madmanX: scene.madman.x,
+      madmanY: scene.madman.y,
+      madmanVelX: scene.madman.body.velocity.x,
+      madmanVelY: scene.madman.body.velocity.y,
+      anchorsCount: scene.anchorSystem.getAnchors().length,
+      badgeVisible: scene.snapBadge?.visible || false,
+      badgeTexture: scene.snapBadge?.texture.key || null,
+    };
+  },
   getAnchors: () => {
     const scene = game.scene.scenes[0] as any;
     if (!scene || !scene.anchorSystem) return [];
     return scene.anchorSystem.getAnchors();
-  },
-  isSnapped: () => {
-    const scene = game.scene.scenes[0] as any;
-    return scene?.isSnapped || false;
-  },
-  getAimWindowTimer: () => {
-    const scene = game.scene.scenes[0] as any;
-    return scene?.aimWindowTimer || 0;
   },
 };
 

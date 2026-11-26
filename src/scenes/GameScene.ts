@@ -278,9 +278,12 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     const dt = delta / 1000;
 
-    // 更新冷却
+    // 更新冷却（限制在 0 以上）
     if (this.dashCooldown > 0) {
       this.dashCooldown -= dt;
+      if (this.dashCooldown < 0) {
+        this.dashCooldown = 0;
+      }
     }
 
     // 更新瞄准
