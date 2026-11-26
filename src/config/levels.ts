@@ -112,30 +112,30 @@ export const riftFirstLeap: LevelConfig = {
       height: 1, // 32 px
     },
     
-    // 裂谷宽度 12u（基于实测物理：保留发射15.29u，跳跃+短冲11.40u）
-    riftWidth: 12,  // 384 px
+    // 裂谷宽度 10u（符合规格 10~11u）
+    riftWidth: 10,  // 320 px
     
-    // 右侧目标平台（8u 宽）
+    // 右侧目标平台（8u 宽，与左平台同高）
     rightPlatform: {
-      x: 28,     // 左平台右边缘(12) + 裂谷(12) + 右平台半宽(4) = 28
-      y: 24,
+      x: 26,     // 左平台右边缘(12) + 裂谷(10) + 右平台半宽(4) = 26
+      y: 24,     // 与左平台同高
       width: 8,
       height: 1,
     },
     
     // 可吸附板：左侧平台右边缘的凸台
-    // 位置：左平台右边缘向右 2.5u，向上突出
+    // 位置：左平台右边缘向右 1.5u，高度降低以减少发射射程
     attachablePlate: {
       x: 13.5,   // 左平台右边缘(12) + 1.5u = 13.5
-      y: 22,     // 比平台高 2u
+      y: 23,     // 比平台高 1u（降低以减少射程）
       width: 2,  // 2u 宽的凸台
-      height: 3, // 3u 高
+      height: 2, // 2u 高
       type: 'ledge',
     },
     
     // 压力板：右侧平台左部
     pressurePlate: {
-      x: 25.5,   // 右平台左边缘 + 1.5u (调整后位置)
+      x: 23.5,   // 右平台左边缘 + 1.5u
       y: 23.5,   // 平台表面上方 0.5u
       width: 2,
       height: 0.5,
@@ -143,17 +143,17 @@ export const riftFirstLeap: LevelConfig = {
     
     // 桥梁：从右侧平台中部向左伸出
     bridge: {
-      retractedX: 28,  // 收回时在右平台内部
-      extendedX: 20,   // 伸出后跨越部分裂谷
-      y: 24,
-      width: 8,        // 加长以覆盖更宽的裂谷
+      retractedX: 26,    // 收回时在右平台内部
+      extendedX: 19,     // 伸出后跨越部分裂谷
+      y: 24,             // 与平台同高
+      width: 7,          // 覆盖裂谷
       height: 0.8,
-      extendDuration: 0.5,  // 0.5 秒伸出动画
+      extendDuration: 0.5,
     },
     
     // 出口区：右侧平台右端
     exitZone: {
-      x: 31,     // 调整到新的右平台位置
+      x: 29,     // 右平台右端
       y: 22,
       width: 2,
       height: 4,
@@ -167,11 +167,11 @@ export const riftFirstLeap: LevelConfig = {
   },
   
   physics: {
-    keptLaunchRange: 15.29,      // 保留锚点射程（实测）
-    jumpPlusShortDashRange: 11.40, // 跳跃+短冲（实测）
-    riftWidth: 12.0,             // 裂谷宽度
-    marginKept: 3.29,            // 保留发射余量 (15.29 - 12.0)
-    marginJumpDash: 0.60,        // 跳跃+短冲差距 (12.0 - 11.40)
+    keptLaunchRange: 14.96,      // 保留锚点射程（从左平台边缘 x=12 实测）
+    jumpPlusShortDashRange: 9.31, // 跳跃+短冲（从左平台边缘 x=12 实测）
+    riftWidth: 10.0,             // 裂谷宽度（符合规格 10~11u）
+    marginKept: 4.96,            // 保留发射余量 (14.96 - 10.0) >=1u ✓
+    marginJumpDash: 0.69,        // 跳跃+短冲差距 (10.0 - 9.31) ~0.7u
   },
   
   mechanics: {

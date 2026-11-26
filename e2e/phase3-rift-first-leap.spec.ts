@@ -229,8 +229,8 @@ test.describe('Phase 3: 裂谷初跃', () => {
       const ppu = 32;
       const scene = window.__GAME__.scene.scenes[0] as any;
       
-      // 压力板位置更新为 x=25.5u
-      const plateX = 25.5 * ppu;
+      // 压力板位置在 x=23.5u
+      const plateX = 23.5 * ppu;
       const plateY = 23 * ppu;
       scene.madman.setPosition(plateX, plateY);
       window.__TEST_API__.step(500);
@@ -238,9 +238,11 @@ test.describe('Phase 3: 裂谷初跃', () => {
       return {
         bridgeExtended: scene.bridgeExtended,
         bridgeVisible: scene.bridgeSprite?.visible,
+        madmanX: scene.madman.x / ppu,
       };
     });
     
+    console.log(`疯子位置: x=${plateResult.madmanX.toFixed(2)}`);
     expect(plateResult.bridgeExtended).toBe(true);
     console.log('✓ 压力板激活，桥梁伸出');
 
@@ -265,8 +267,8 @@ test.describe('Phase 3: 裂谷初跃', () => {
       const ppu = 32;
       const scene = window.__GAME__.scene.scenes[0] as any;
       
-      // 出口区位置更新为 x=31u
-      const exitX = 31 * ppu;
+      // 出口区位置在 x=29u
+      const exitX = 29 * ppu;
       const exitY = 22 * ppu;
       scene.genius.setPosition(exitX, exitY);
       scene.madman.setPosition(exitX + 20, exitY);
@@ -276,9 +278,12 @@ test.describe('Phase 3: 裂谷初跃', () => {
         levelCleared: scene.levelCleared,
         clearMessageVisible: scene.clearMessage?.visible,
         clearMessageText: scene.clearMessage?.text,
+        geniusX: scene.genius.x / ppu,
+        madmanX: scene.madman.x / ppu,
       };
     });
     
+    console.log(`双方位置: 天才=${clearResult.geniusX.toFixed(2)}, 疯子=${clearResult.madmanX.toFixed(2)}`);
     expect(clearResult.levelCleared).toBe(true);
     expect(clearResult.clearMessageVisible).toBe(true);
     console.log('✓ 双方进入出口，通关消息显示');
