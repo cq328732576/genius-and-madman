@@ -90,13 +90,17 @@ window.__TEST_API__ = {
     scene.genius.setPosition(x, y);
     scene.genius.setVelocity(0, 0);
   },
-  // 步进游戏帧（固定时间步长）
+  // 步进游戏帧（固定时间步长，包含物理引擎）
   step: (ms: number) => {
     const scene = game.scene.scenes[0] as any;
     if (!scene) return;
-    const steps = Math.ceil(ms / 16.67); // 60 FPS
+    const dt = 16.67; // 60 FPS
+    const steps = Math.ceil(ms / dt);
     for (let i = 0; i < steps; i++) {
-      scene.update(0, 16.67);
+      // 推进场景更新
+      scene.update(0, dt);
+      // 推进物理引擎
+      scene.physics.world.step(dt / 1000);
     }
   },
   // 触发冲刺（模拟按键并步进）

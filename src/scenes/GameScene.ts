@@ -16,6 +16,9 @@ export class GameScene extends Phaser.Scene {
   // 角色
   private genius!: Phaser.Physics.Arcade.Sprite;
   private madman!: Phaser.Physics.Arcade.Sprite;
+  
+  // 调试标志
+  private hasLoggedDash = false;
 
   // 输入
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -553,6 +556,17 @@ export class GameScene extends Phaser.Scene {
 
     const snapResult = this.anchorSystem.checkSnapAlongPath(dashPath);
 
+    // 调试日志（仅首次）
+    if (tuning.debug.enabled && !this.hasLoggedDash) {
+      console.log('[tryDash]', {
+        madmanPos,
+        direction,
+        dashDistance: tuning.madman.shortDashDistance,
+        snapResult,
+      });
+      this.hasLoggedDash = true;
+    }
+
     if (snapResult.snapped && snapResult.hoverPoint) {
       // 吸附成功
       this.isSnapped = true;
@@ -560,13 +574,16 @@ export class GameScene extends Phaser.Scene {
       this.aimWindowTimer = 0;
       this.anchorSystem.lockAnchor(snapResult.anchorId!);
 
-      // 移动到悬停点
+      // 移动到悬停点并禁用重力
       const hoverPixels = this.unitsToPixels(
         snapResult.hoverPoint.x,
         snapResult.hoverPoint.y
       );
       this.madman.setPosition(hoverPixels.x, hoverPixels.y);
       this.madman.setVelocity(0, 0);
+      
+      const body = this.madman.body as Phaser.Physics.Arcade.Body;
+      body.allowGravity = false;
     } else {
       // 短冲刺
       this.performShortDash(direction);
@@ -577,68 +594,40 @@ export class GameScene extends Phaser.Scene {
   }
 
   private performShortDash(direction: Vec2) {
-    const distance = tuning.madman.shortDashDistance * tuning.world.pixelsPerUnit;
-    this.madman.setVelocity(direction.x * distance * 10, direction.y * distance * 10);
-
-    // 短时间后停止
+    // 运动学冲刺：直接移动位置
+    const dashDistance = tuning.madman.shortDashDistance * tuning.world.pixelsPerUnit;
+    const targetX = this.madman.x + direction.x * dashDistance;
+    const targetY = this.madman.y + direction.y * dashDistance;
+    
+    // 禁用重力并移动
+    const body = this.madman.body as Phaser.Physics.Arcade.Body;
+    const oldGravity = body.allowGravity;
+    body.allowGravity = false;
+    
+    this.madman.setPosition(targetX, targetY);
+    this.madman.setVelocity(0, 0);
+    
+    // 恢复重力
     this.time.delayedCall(100, () => {
-      this.madman.setVelocity(0, 0);
+      if (this.madman && this.madman.body) {
+        (this.madman.body as Phaser.Physics.Arcade.Body).allowGravity = oldGravity;
+      }
     });
   }
 
   private launchFromAnchor() {
+    // Phase 1: 禁用弹射机制
+    // 瞄准窗口结束后，疯子简单释放/坠落
+    
     if (!this.snappedAnchorId) return;
 
-    const anchor = this.anchorSystem.getAnchor(this.snappedAnchorId);
-    if (!anchor) return;
+    // 解锁锚点（但不移除）
+    this.anchorSystem.unlockAnchor(this.snappedAnchorId);
 
-    const madmanPos = this.pixelsToUnits(this.madman.x, this.madman.y);
-
-    // 计算接近方向
-    const approachDir: Vec2 = {
-      x: anchor.position.x - madmanPos.x,
-      y: anchor.position.y - madmanPos.y,
-    };
-    const len = Math.sqrt(approachDir.x ** 2 + approachDir.y ** 2);
-    if (len > 0) {
-      approachDir.x /= len;
-      approachDir.y /= len;
-    }
-
-    // 计算输入方向
-    let inputDir: Vec2 | null = null;
-    if (this.cursors.up!.isDown || this.cursors.down!.isDown ||
-        this.cursors.left!.isDown || this.cursors.right!.isDown) {
-      inputDir = {
-        x: (this.cursors.right!.isDown ? 1 : 0) - (this.cursors.left!.isDown ? 1 : 0),
-        y: (this.cursors.down!.isDown ? 1 : 0) - (this.cursors.up!.isDown ? 1 : 0),
-      };
-    }
-
-    // 计算弹射速度
-    const velocity = this.anchorSystem.calculateLaunchVelocity(
-      approachDir,
-      inputDir,
-      this.consumeAnchor
-    );
-
-    // 应用速度
-    this.madman.setVelocity(
-      velocity.x * tuning.world.pixelsPerUnit,
-      velocity.y * tuning.world.pixelsPerUnit
-    );
-
-    // 解锁或移除锚点
-    if (this.consumeAnchor) {
-      this.anchorSystem.removeAnchor(this.snappedAnchorId);
-      const sprite = this.anchorSprites.get(this.snappedAnchorId);
-      if (sprite) {
-        sprite.destroy();
-        this.anchorSprites.delete(this.snappedAnchorId);
-      }
-    } else {
-      this.anchorSystem.unlockAnchor(this.snappedAnchorId);
-    }
+    // 简单释放：清除水平速度，恢复重力
+    this.madman.setVelocityX(0);
+    const body = this.madman.body as Phaser.Physics.Arcade.Body;
+    body.allowGravity = true;
 
     this.isSnapped = false;
     this.snappedAnchorId = null;
