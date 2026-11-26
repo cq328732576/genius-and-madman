@@ -402,6 +402,54 @@ describe('AnchorSystem', () => {
       // 应该在锥角内（70度）
       expect(diff).toBeLessThanOrEqual(defaultTuning.madman.coneHalfAngleDeg + 1);
     });
+
+    it('锥角限制：0° 输入应限制到 -20°（向上轴）', () => {
+      const launchAxis: Vec2 = { x: 0, y: -1 }; // 向上 = -90°
+      const inputDir: Vec2 = { x: 1, y: 0 }; // 向右 = 0°
+      const approachDir: Vec2 = { x: 1, y: 0 };
+
+      const angles = system.calculateAimAngles(approachDir, inputDir, launchAxis);
+      
+      // 0° 距离 -90° 是 90°，应限制到最近边缘 -20°
+      expect(angles.clampedAngle).toBeCloseTo(-20, 1);
+    });
+
+    it('锥角限制：180° 输入应限制到 -160°（向上轴）', () => {
+      const launchAxis: Vec2 = { x: 0, y: -1 }; // 向上 = -90°
+      const inputDir: Vec2 = { x: -1, y: 0 }; // 向左 = 180°
+      const approachDir: Vec2 = { x: 1, y: 0 };
+
+      const angles = system.calculateAimAngles(approachDir, inputDir, launchAxis);
+      
+      // 180° 距离 -90° 是 -90°（最短），应限制到 -160°
+      expect(angles.clampedAngle).toBeCloseTo(-160, 1);
+    });
+
+    it('锥角限制：90°（向下）应限制到边缘', () => {
+      const launchAxis: Vec2 = { x: 0, y: -1 }; // 向上 = -90°
+      const inputDir: Vec2 = { x: 0, y: 1 }; // 向下 = 90°
+      const approachDir: Vec2 = { x: 1, y: 0 };
+
+      const angles = system.calculateAimAngles(approachDir, inputDir, launchAxis);
+      
+      // 90° 距离 -90° 是 180°，应选择任一边缘
+      // 两个边缘: -20° (axis + 70°) 和 -160° (axis - 70°)
+      const diff = Math.abs(angles.clampedAngle - (-20));
+      const diff2 = Math.abs(angles.clampedAngle - (-160));
+      expect(Math.min(diff, diff2)).toBeLessThan(1);
+    });
+
+    it('锥角限制：-60° 在范围内应保持不变', () => {
+      const launchAxis: Vec2 = { x: 0, y: -1 }; // 向上 = -90°
+      const inputAngle = -60 * Math.PI / 180;
+      const inputDir: Vec2 = { x: Math.cos(inputAngle), y: Math.sin(inputAngle) };
+      const approachDir: Vec2 = { x: 1, y: 0 };
+
+      const angles = system.calculateAimAngles(approachDir, inputDir, launchAxis);
+      
+      // -60° 距离 -90° 是 30°，在 ±70° 内，应保持
+      expect(angles.clampedAngle).toBeCloseTo(-60, 1);
+    });
   });
 
   describe('被打断规则', () => {

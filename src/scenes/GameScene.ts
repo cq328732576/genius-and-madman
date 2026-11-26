@@ -36,6 +36,7 @@ export class GameScene extends Phaser.Scene {
   private aimDirection: Vec2 = { x: 0, y: -1 }; // Phase 2: 瞄准方向（默认向上）
   private incomingDashDir: Vec2 = { x: 1, y: 0 }; // Phase 2: 冲刺进入方向
   private cKeyDown = false; // Phase 2: C键状态
+  private lastLaunchSpeed = 0; // Phase 2: 最后一次发射的速度（u/s）
 
   // 渲染对象
   private anchorSprites: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -718,6 +719,12 @@ export class GameScene extends Phaser.Scene {
       { x: 0, y: -1 } // 发射轴向上
     );
 
+    // 记录发射时刻的速度（u/s）
+    this.lastLaunchSpeed = Math.sqrt(
+      launchVelocity.x * launchVelocity.x + 
+      launchVelocity.y * launchVelocity.y
+    );
+
     // Phase 2: 如果消耗锚点，则移除锚点
     if (this.consumeAnchor) {
       this.anchorSystem.removeAnchor(this.snappedAnchorId);
@@ -919,13 +926,6 @@ export class GameScene extends Phaser.Scene {
       ) / tuning.world.pixelsPerUnit;
     }
     
-    // 计算当前速度（用于发射后显示）
-    const body = this.madman.body as Phaser.Physics.Arcade.Body;
-    const currentSpeed = Math.sqrt(
-      body.velocity.x * body.velocity.x +
-      body.velocity.y * body.velocity.y
-    ) / tuning.world.pixelsPerUnit;
-
     const lines = [
       `锚点数: ${anchors.length}/${tuning.genius.maxAnchors}`,
       `冲刺冷却: ${this.dashCooldown.toFixed(2)}s`,
@@ -934,7 +934,7 @@ export class GameScene extends Phaser.Scene {
       `原始输入: ${this.isSnapped ? rawAngle.toFixed(1) + '°' : '-'}`,
       `限制瞄准: ${this.isSnapped ? clampedAngle.toFixed(1) + '°' : '-'}`,
       `最终发射: ${this.isSnapped ? finalAngle.toFixed(1) + '°' : '-'}`,
-      `发射速度: ${this.isSnapped ? launchSpeed.toFixed(1) + ' u/s' : currentSpeed > 1 ? currentSpeed.toFixed(1) + ' u/s' : '-'}`,
+      `发射速度: ${this.isSnapped ? launchSpeed.toFixed(1) + ' u/s' : this.lastLaunchSpeed > 0 ? this.lastLaunchSpeed.toFixed(1) + ' u/s' : '-'}`,
       `消耗锚点: ${this.consumeAnchor ? '是' : '否'}`,
       '',
       '操作:',

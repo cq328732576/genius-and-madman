@@ -94,10 +94,8 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
 
     // 验证状态
     expect(state.isSnapped).toBe(true);
-    // 限制瞄准角度应该在 ±70° 范围内（相对于向上轴 -90°）
-    // 向上轴是 -90°，所以范围是 -20° 到 -160°
-    const clampedFromAxis = Math.abs(state.clampedAngle - (-90));
-    expect(clampedFromAxis).toBeLessThanOrEqual(70.5);
+    // 输入0°距离轴-90°是90°，应限制到最近边缘-20°
+    expect(state.clampedAngle).toBeCloseTo(-20, 0.5);
     expect(state.hudText).toContain('限制瞄准:');
     expect(state.trajectoryPointsLength).toBeGreaterThan(0);
 
@@ -147,20 +145,13 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
     });
 
     console.log('P2-03 result:', result);
+    console.log('P2-03 lastLaunchSpeed:', result.state.lastLaunchSpeed, 'u/s');
 
     // 验证锚点未被消耗
     expect(result.afterAnchors).toBe(1);
 
-    // 验证速度约为 16 u/s
-    const speed = Math.sqrt(
-      result.state.madmanVelX * result.state.madmanVelX +
-      result.state.madmanVelY * result.state.madmanVelY
-    ) / 32; // 转换为 u/s
-    
-    console.log('P2-03 launch speed:', speed, 'u/s');
-    // 由于混合和重力影响，速度可能在10-18 u/s范围内
-    expect(speed).toBeGreaterThan(8);
-    expect(speed).toBeLessThan(18);
+    // 验证记录的发射速度 ≈ 16 u/s
+    expect(Math.abs(result.state.lastLaunchSpeed - 16)).toBeLessThan(0.1);
     
     // 验证疯子在空中
     expect(result.state.madmanY).toBeLessThan(768 - 20);
@@ -214,20 +205,13 @@ test.describe('Phase 2 证据捕获（修订版）', () => {
     });
 
     console.log('P2-04 result:', result);
+    console.log('P2-04 lastLaunchSpeed:', result.state.lastLaunchSpeed, 'u/s');
 
     // 验证锚点被消耗
     expect(result.afterAnchors).toBe(0);
 
-    // 验证速度约为 21.6 u/s (16 * 1.35)
-    const speed = Math.sqrt(
-      result.state.madmanVelX * result.state.madmanVelX +
-      result.state.madmanVelY * result.state.madmanVelY
-    ) / 32; // 转换为 u/s
-    
-    console.log('P2-04 launch speed:', speed, 'u/s');
-    // 由于混合和重力影响，速度可能在12-24 u/s范围内
-    expect(speed).toBeGreaterThan(10);
-    expect(speed).toBeLessThan(25);
+    // 验证记录的发射速度 ≈ 21.6 u/s (16 * 1.35)
+    expect(Math.abs(result.state.lastLaunchSpeed - 21.6)).toBeLessThan(0.1);
     
     // 验证疯子在空中
     expect(result.state.madmanY).toBeLessThan(768 - 20);

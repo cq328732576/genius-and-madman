@@ -413,21 +413,28 @@ export class AnchorSystem {
     };
   }
 
+  /**
+   * 限制方向在锥角内
+   * 使用带符号的最短角度差
+   */
   private constrainToCone(
     dir: Vec2,
     centerDir: Vec2,
-    maxAngle: number
+    maxAngleDeg: number
   ): Vec2 {
+    // 计算dir相对于centerDir的带符号角度差
     const angle = this.angleBetween(dir, centerDir);
-    if (Math.abs(angle) <= maxAngle) {
+    
+    // 如果在锥角内，不需要限制
+    if (Math.abs(angle) <= maxAngleDeg) {
       return dir;
     }
 
-    // 旋转到锥角边界
+    // 超出锥角，限制到最近的边缘
     const sign = angle > 0 ? 1 : -1;
-    const constrainedAngle = (sign * maxAngle * Math.PI) / 180;
+    const constrainedAngleDeg = sign * maxAngleDeg;
     const centerAngle = Math.atan2(centerDir.y, centerDir.x);
-    const newAngle = centerAngle + constrainedAngle;
+    const newAngle = centerAngle + (constrainedAngleDeg * Math.PI / 180);
 
     return {
       x: Math.cos(newAngle),
@@ -467,9 +474,15 @@ export class AnchorSystem {
     return { x: v.x / len, y: v.y / len };
   }
 
+  /**
+   * 计算从 b 到 a 的带符号角度（度数）
+   * 正值表示逆时针，负值表示顺时针
+   * 返回范围 (-180, 180]
+   */
   private angleBetween(a: Vec2, b: Vec2): number {
     const dot = a.x * b.x + a.y * b.y;
-    const cross = a.x * b.y - a.y * b.x;
+    // 叉积：b×a 的 z 分量
+    const cross = b.x * a.y - b.y * a.x;
     return (Math.atan2(cross, dot) * 180) / Math.PI;
   }
 }

@@ -228,6 +228,7 @@ window.__TEST_API__ = {
       clampedAngle,
       finalAngle,
       launchSpeed,
+      lastLaunchSpeed: scene.lastLaunchSpeed,
       consumeAnchor: scene.consumeAnchor,
       trajectoryPointsLength: scene.trajectoryDots.length,
     };
