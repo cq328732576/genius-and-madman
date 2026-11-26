@@ -91,63 +91,40 @@ test.describe('Phase 2 演示视频', () => {
     console.log('保留发射:', JSON.stringify(keptResult));
     await page.waitForTimeout(2800); // 观察完整弧线
 
-    // 场景3: 重新吸附 (1秒)
+    // 场景3: 重新吸附，使用setHoldDash保持吸附 (1秒)
     const snapResult = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
-      
-      // 清除第一个锚点（如果保留的话）
-      const anchors = window.__TEST_API__.getAnchors();
-      console.log('重新吸附前锚点数:', anchors.length);
       
       window.__TEST_API__.placeAnchorAt(500 / 32, 600 / 32);
       scene.madman.setPosition(385, 600);
       scene.dashCooldown = 0;
-      window.__TEST_API__.setHoldDash(false);
+      
+      // 吸附前先设置consume和aim，避免窗口过期
+      window.__TEST_API__.setAimDirection(0, -1);
+      window.__TEST_API__.setConsume(true);
+      
+      // 使用setHoldDash(true)保持吸附，避免窗口过期自动发射
+      window.__TEST_API__.setHoldDash(true);
       window.__TEST_API__.triggerDash('right');
       window.__TEST_API__.step(100);
       
       return {
         isSnapped: scene.isSnapped,
-        anchorsCount: window.__TEST_API__.getAnchors().length,
-        madmanX: scene.madman.x,
-        madmanY: scene.madman.y
+        aimWindowTimer: scene.aimWindowTimer,
+        consumeAnchor: scene.consumeAnchor
       };
     });
-    console.log('重新吸附结果:', snapResult);
-    await page.waitForTimeout(500);
+    console.log('重新吸附结果:', JSON.stringify(snapResult));
+    await page.waitForTimeout(400); // 让用户看到HUD显示21.6，保持<0.5s
 
-    // 场景4: 消耗发射，HUD显示21.6 (6秒)
-    await page.evaluate(() => {
-      window.__TEST_API__.setAimDirection(0, -1);
-      window.__TEST_API__.setConsume(true);
-      window.__TEST_API__.step(16.67);
-    });
-    
-    await page.waitForTimeout(1500); // 让HUD显示21.6
-
+    // 场景4: 释放hold触发消耗发射
     const consumedResult = await page.evaluate(() => {
       const scene = window.__GAME__.scene.scenes[0] as any;
       
-      const before = {
-        isSnapped: scene.isSnapped,
-        aimWindowTimer: scene.aimWindowTimer,
-        consumeAnchor: scene.consumeAnchor,
-        cKeyDown: scene.cKeyDown,
-        lastLaunchSpeed: scene.lastLaunchSpeed
-      };
-      console.log('step(300)前:', before);
-      
-      window.__TEST_API__.step(300);
-      
-      const after = {
-        isSnapped: scene.isSnapped,
-        lastLaunchSpeed: scene.lastLaunchSpeed,
-        launchY: scene.lastLaunch.y,
-        launchVy: scene.lastLaunch.vy
-      };
-      console.log('step(300)后:', after);
-      
-      window.__TEST_API__.step(16.67);
+      // 释放hold，让窗口自然过期触发发射
+      window.__TEST_API__.setHoldDash(false);
+      window.__TEST_API__.step(300); // 等待窗口过期
+      window.__TEST_API__.step(16.67); // 等待发射完成
       
       return {
         launchSpeed: scene.lastLaunchSpeed,
@@ -159,6 +136,25 @@ test.describe('Phase 2 演示视频', () => {
     console.log('消耗发射:', JSON.stringify(consumedResult));
     await page.waitForTimeout(4000); // 观察更高的弧线
     
+    // 断言：确保consume工作
+    if (Math.abs(keptResult.launchSpeed - 16.0) > 0.1) {
+      throw new Error(`保留速度错误: ${keptResult.launchSpeed}, 期望16.0`);
+    }
+    if (Math.abs(consumedResult.launchSpeed - 21.6) > 0.1) {
+      throw new Error(`消耗速度错误: ${consumedResult.launchSpeed}, 期望21.6`);
+    }
+    
+    // 计算峰值比 (vy²比)
+    const keptRise = (keptResult.launchVy * keptResult.launchVy) / 1000; // vy²/(2g)
+    const consumedRise = (consumedResult.launchVy * consumedResult.launchVy) / 1000;
+    const riseRatio = consumedRise / keptRise;
+    
+    if (riseRatio < 1.6) {
+      throw new Error(`峰值比过低: ${riseRatio.toFixed(2)}, 期望≥1.6`);
+    }
+    
+    console.log('验证通过: 保留16.0, 消耗21.6, 峰值比', riseRatio.toFixed(2));
+
     // 保存视频
     await context.close();
     await browser.close();
