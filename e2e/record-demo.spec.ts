@@ -27,7 +27,7 @@ test.describe('Phase 2 演示视频', () => {
     });
     
     const page = await context.newPage();
-    await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:3000/?level=testLevel', { waitUntil: 'networkidle' });
     await page.waitForSelector('canvas', { timeout: 15000 });
     await page.waitForFunction(() => {
       return window.__GAME__ && window.__TEST_API__ && 
